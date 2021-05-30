@@ -124,7 +124,7 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
             batchType1(memPtr,end);
         } else if (byte0 == 1) {
             batchType2(memPtr,end);
-        } else if (byte0 == 3) {
+        } else if (byte0 == 2) {
             batchType3(memPtr,end);
         } else {
             batchType4(memPtr,end);

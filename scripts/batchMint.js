@@ -5,22 +5,10 @@ const { config, ethers, tenderly, run } = require("hardhat");
 const R = require("ramda");
 const { getTxData } = require('./benchmarkLib')
 const distributions = require("../artifacts/contracts/Distributions.sol/Distributions_v0.json");
+const {getFileNames} = require('./utils')
 
 
-const filterFiles = (readDirPath, batchType, round) => {
-    const files = fs.readdirSync(readDirPath);
-    const newFiles = [];
-    for (let file of files) {
-        if (!file.startsWith(batchType) || (round && !file.includes(round))) {
-            continue;
-        }
-
-        newFiles.push(file);
-    }
-    return newFiles;
-}
-
-const batchMint = async (readDirPath, writeDirPath, batchType, round) => {
+const batchMint = async (readDirPath, writeDirPath, round) => {
 
     console.log("\n\n 📡 Batch minting reddit points...\n");
     const deployerWallet = ethers.provider.getSigner();
@@ -46,11 +34,11 @@ const batchMint = async (readDirPath, writeDirPath, batchType, round) => {
 
     let index = 0;
 
-    const files = filterFiles(readDirPath, batchType, round);
+    const files = getFileNames(`${readDirPath}/${round}`);
 
     for (let file of files) {
 
-        let binaryData = fs.readFileSync(`${readDirPath}/${file}`);
+        let binaryData = fs.readFileSync(`${readDirPath}/${round}/${file}`);
         const bytes = Buffer.byteLength(binaryData);
         console.info(chalk.blueBright(`minting ${file}, bytes: ${bytes}`));
 
@@ -77,12 +65,14 @@ const batchMint = async (readDirPath, writeDirPath, batchType, round) => {
         index += 1;
     }
 
-    fs.writeFileSync(`${writeDirPath}/compressedDataMonths.json`, JSON.stringify(compressedData), 'utf-8');
+    fs.mkdirSync(`${writeDirPath}/${round}`)
 
-    fs.writeFileSync(`${writeDirPath}/txHashData.json`, JSON.stringify(txHashData), 'utf-8');
+    fs.writeFileSync(`${writeDirPath}/${round}/compressedDataMonths.json`, JSON.stringify(compressedData), 'utf-8');
+
+    fs.writeFileSync(`${writeDirPath}/${round}/txHashData.json`, JSON.stringify(txHashData), 'utf-8');
 
     let txData = await getTxData(txHashData);
-    fs.writeFileSync(`${writeDirPath}/txData.json`, JSON.stringify(txData), 'utf-8');
+    fs.writeFileSync(`${writeDirPath}/${round}/txData.json`, JSON.stringify(txData), 'utf-8');
     console.info("Done batch minting.");
 
 };
@@ -99,9 +89,9 @@ const main = async () => {
     const batchType2 = 'b2'
     const readDirBricks = 'reddit-data-encoded/bricks'
     const writeDirBricks = 'batch-minting/bricks'
-    const round = 'round_1_'
+    const round = 'round_1_finalized'
 
-    await batchMint(readDirBricks, writeDirBricks, batchType1, round)
+    await batchMint(readDirBricks, writeDirBricks, round)
 
 
 };

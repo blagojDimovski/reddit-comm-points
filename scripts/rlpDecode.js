@@ -4,6 +4,9 @@ const chalk = require("chalk");
 const { config, ethers, tenderly, run } = require("hardhat");
 const R = require("ramda");
 const rlp = require('rlp')
+
+const { getFileNames } = require('./utils');
+
 // const STRING_SHORT_START = 0x80;
 // const STRING_LONG_START  = 0xb8;
 // const LIST_SHORT_START   = 0xc0;
@@ -34,7 +37,7 @@ const rlp = require('rlp')
 //
 // }
 
-const decodeBatchType1 = (input) => {
+const decodeBatchType0 = (input, size) => {
 
     let addrOffset = 20;
     let pointer = 1;
@@ -61,13 +64,14 @@ const decodeBatchType1 = (input) => {
     }
 
     return {
-        batchType: 1,
+        batchType: 0,
         totalAddresses: (Object.keys(addresses)).length,
-        addresses: addresses
+        addresses: addresses,
+        numBytes: size
     };
 }
 
-const decodeBatchType2 = (input) => {
+const decodeBatchType1 = (input, size) => {
 
     let addrOffset = 20;
 
@@ -98,45 +102,46 @@ const decodeBatchType2 = (input) => {
     return {
         batchType: 1,
         totalAddresses: (Object.keys(addresses)).length,
-        addresses: addresses
+        addresses: addresses,
+        numBytes: size
     }
 
 
 }
 
 
-const decodeBatchType3 = (input) => {
-    addresses = {
+const decodeBatchType2 = (input, size) => {
+    ids = {
     };
 
     input = ethers.utils.hexDataSlice(input, 1)
 
     while(input.length > 2) {
         let decoded = rlp.decode(input, true);
-        let addr = ethers.utils.hexlify(decoded.data);
+        let id = ethers.BigNumber.from(decoded.data).toString();
 
-        decoded = rlp.decode(decoded, true);
+        decoded = rlp.decode(decoded.remainder, true);
         let amount = ethers.BigNumber.from(decoded.data)
         input = ethers.utils.hexlify(decoded.remainder)
 
-        if (addresses[addr]) {
-            addresses[addr] += amount.toNumber();
+        if (ids[id]) {
+            ids[id] += amount.toNumber();
         } else {
-            addresses[addr] = amount.toNumber()
+            ids[id] = amount.toNumber()
         }
     }
 
     return {
-        batchType: 3,
-        totalAddresses: (Object.keys(addresses)).length,
-        addresses: addresses
+        batchType: 2,
+        totalIds: (Object.keys(ids)).length,
+        ids: ids,
+        numBytes: size
     };
 }
 
-const decodeBatchType4 = (input) => {
+const decodeBatchType3 = (input, size) => {
 
-
-    addresses = {
+    ids = {
 
     };
 
@@ -152,53 +157,63 @@ const decodeBatchType4 = (input) => {
 
         for(let i = 0; i < numAddresses; i++) {
             input = rlp.decode(input, true)
-            let addr = ethers.utils.hexlify(input.data);
-            if (addresses[addr]) {
-                addresses[addr] += amount.toNumber();
+            let id = ethers.BigNumber.from(input.data).toString();
+            if (ids[id]) {
+                ids[id] += amount.toNumber();
             } else {
-                addresses[addr] = amount.toNumber()
+                ids[id] = amount.toNumber()
             }
             input = input.remainder;
         }
     }
 
     return {
-        batchType: 4,
-        totalAddresses: (Object.keys(addresses)).length,
-        addresses: addresses
+        batchType: 3,
+        totalIds: (Object.keys(ids)).length,
+        ids: ids,
+        numBytes: size
     };
 }
 
 
 const decode = (dirPathRead, dirPathWrite) => {
-    const files = fs.readdirSync(dirPathRead);
-    for (let file of files) {
-        let binaryData = fs.readFileSync(`${dirPathRead}/${file}`);
-        let size = Buffer.byteLength(binaryData);
-        let binData = binaryData.toString('hex');
-        let binDataHex = "0x" + binData;
-        let dataSlice1 = ethers.utils.hexDataSlice(binDataHex, 0, 1)
-        let batchType = parseInt(dataSlice1, 16)
-        let decodedData;
+    const subdirs = getFileNames(dirPathRead);
+    for (let subdir of subdirs) {
 
-
-        if(batchType === 0) {
-            decodedData = decodeBatchType1(binDataHex)
-        } else if (batchType === 1) {
-            decodedData = decodeBatchType2(binDataHex)
-        } else if (batchType === 2) {
-            decodedData = decodeBatchType1(binDataHex)
-        } else if (batchType === 3) {
-            decodedData = decodeBatchType2(binDataHex)
-        } else {
-            continue;
+        const data = {
+            newSingles: [],
+            newGrouped: [],
+            repeatingSingles: [],
+            repeatingGrouped: []
         }
 
-        if(decodedData) {
-            decodedData['numBytes'] = size;
+        let files = getFileNames(`${dirPathRead}/${subdir}`)
+
+        for (let file of files) {
+            let binaryData = fs.readFileSync(`${dirPathRead}/${subdir}/${file}`);
+            let size = Buffer.byteLength(binaryData);
+            let binData = binaryData.toString('hex');
+            let binDataHex = "0x" + binData;
+            let dataSlice1 = ethers.utils.hexDataSlice(binDataHex, 0, 1)
+            let batchType = parseInt(dataSlice1, 16)
+            let decodedData;
+
+            if(batchType === 0) {
+                decodedData = decodeBatchType0(binDataHex, size)
+                data.newSingles.push(decodedData)
+            } else if (batchType === 1) {
+                decodedData = decodeBatchType1(binDataHex, size)
+                data.newGrouped.push(decodedData)
+            } else if (batchType === 2) {
+                decodedData = decodeBatchType2(binDataHex, size)
+                data.repeatingSingles.push(decodedData)
+            } else if (batchType === 3) {
+                decodedData = decodeBatchType3(binDataHex, size)
+                data.repeatingGrouped.push(decodedData)
+            }
         }
 
-        fs.writeFileSync(`${dirPathWrite}/${file}.json`, JSON.stringify(decodedData), 'utf-8')
+        fs.writeFileSync(`${dirPathWrite}/${subdir}.json`, JSON.stringify(data), 'utf-8')
 
     }
 };

@@ -6,80 +6,87 @@ const {getFileNames} = require('./utils')
 
 const {concat, arrayify } = ethers.utils;
 
-const toByteBN = (karmaStr) => {
-    let karmaBn = ethers.BigNumber.from(karmaStr);
-    return arrayify(karmaBn)
+const numberToBytes = (num) => {
+    let numBn = ethers.BigNumber.from(num);
+    return arrayify(numBn)
 };
 
-const encodeBT1 = (data) => {
+const encodeSinglesNew = (data) => {
 
     let encodedData = [];
 
-    for (let item of data) {
-        if (!item.blockchain_address || !item.karma) continue;
-        let karmaByteBn = toByteBN(item.karma);
-        let karmaEncoded = rlp.encode(karmaByteBn);
-        encodedData = concat([encodedData, item.blockchain_address, karmaEncoded])
+    for (let addr of Object.keys(data)) {
+        let karmaBytes = numberToBytes(data[addr]);
+        let karmaEncoded = rlp.encode(karmaBytes);
+
+        let itemBytes = concat([addr, karmaEncoded])
+        encodedData.push(itemBytes);
     }
-    return encodedData;
+
+    console.log("encoded single new bytes: ", encodedData[0].byteLength);
+
+    return concat(encodedData);
 
 }
 
-const encodeBT2 = (data) => {
+const encodeSinglesRepeating = (data) => {
 
-    let amountGroups = groupByAmount(data);
+    let encodedData = [];
+    for (let id of Object.keys(data)) {
+        let karmaBytes = numberToBytes(data[id]);
+        let karmaEncoded = rlp.encode(karmaBytes);
+
+        let addrIdBytes = numberToBytes(id);
+        let addrIdEncoded = rlp.encode(addrIdBytes);
+        let itemBytes = concat([addrIdEncoded, karmaEncoded])
+        encodedData.push(itemBytes);
+    }
+    console.log("encoded single repeating bytes: ", encodedData[0].byteLength);
+    return concat(encodedData);
+}
+
+
+
+const encodeGroupsNew = (amountGroups) => {
 
     let encodedData = [];
     for (let amount of Object.keys(amountGroups)) {
         let addressBytes = concat(amountGroups[amount])
-        encodedData = concat([encodedData, rlp.encode(toByteBN(amount)), rlp.encode(toByteBN(amountGroups[amount].length)), addressBytes])
+        let amountEncoded = rlp.encode(numberToBytes(amount));
+        let numAddrEncoded = rlp.encode(numberToBytes(amountGroups[amount].length));
+        let itemBytes = concat([amountEncoded, numAddrEncoded, addressBytes]);
+        encodedData.push(itemBytes);
     }
-    return encodedData;
+
+    console.log("encoded group new bytes: ", encodedData[0].byteLength)
+    return concat(encodedData);
 
 }
 
-const groupByAmount = (data) => {
-    const amountGroups = {};
-    for (let item of data) {
-        if(!item.blockchain_address || !item.karma) continue;
 
-        if(amountGroups[item.karma]) {
-            amountGroups[item.karma].push(item.blockchain_address)
-        } else {
-            amountGroups[item.karma] = [item.blockchain_address]
+const encodeGroupsRepeating = (amountGroups) => {
+
+    let encodedData = [];
+    for (let amount of Object.keys(amountGroups)) {
+        let idsEncoded = [];
+        for (let addrId of amountGroups[amount]) {
+            let idBytes = numberToBytes(addrId);
+            let idEncoded = rlp.encode(idBytes);
+            idsEncoded.push(idEncoded)
         }
+        let addrIdsBytes = concat(idsEncoded);
+
+        let amountEncoded = rlp.encode(numberToBytes(amount));
+        let numAddrEncoded = rlp.encode(numberToBytes(amountGroups[amount].length));
+        let itemBytes = concat([amountEncoded, numAddrEncoded, addrIdsBytes]);
+        encodedData.push(itemBytes)
     }
-    return amountGroups;
+
+    console.log("encoded group repeating bytes: ", encodedData[0].byteLength)
+    return concat(encodedData);
 }
 
 
-const chunkItems = (items) => {
-
-    let numItems = items.length;
-    let chunks = 6;
-    let itemsPerChunk = Math.floor(numItems / chunks);
-    let remainingItems = numItems % chunks;
-    let chunkedData = {};
-
-    for (let i = 0; i < chunks; i++) {
-        chunkedData[i] = [];
-        let offset = i * itemsPerChunk;
-        for (let j = 0; j < itemsPerChunk; j++) {
-            chunkedData[i].push(items[offset + j])
-        }
-    }
-
-    if(remainingItems > 0) {
-
-        for (let i = numItems - remainingItems; i < items.length; i++) {
-            chunkedData[chunks - 1].push(items[i])
-        }
-
-    }
-
-    return chunkedData;
-
-};
 
 const encode = async (dirPathRead, dirPathWrite) => {
 
@@ -87,21 +94,45 @@ const encode = async (dirPathRead, dirPathWrite) => {
     for (let file of files) {
         let data = fs.readFileSync(`${dirPathRead}/${file}`)
         data = JSON.parse(data.toString('utf-8'));
-        let fileName = file.replace('.json', '')
+        let subdirName = file.replace('.json', '')
 
-        let chunkedData = chunkItems(data);
-        for (let chunkKey of Object.keys(chunkedData)) {
+        fs.mkdirSync(`${dirPathWrite}/${subdirName}`)
 
-            let encodedBatchType1 = encodeBT1(chunkedData[chunkKey]);
-            encodedBatchType1 = ethers.utils.concat([ethers.utils.hexlify([0]), encodedBatchType1])
-            fs.writeFileSync(`${dirPathWrite}/b1_${fileName}_${chunkKey}`, encodedBatchType1)
-
-            let encodedBatchType2 = encodeBT2(chunkedData[chunkKey]);
-            encodedBatchType2 = ethers.utils.concat([ethers.utils.hexlify([1]), encodedBatchType2])
-            fs.writeFileSync(`${dirPathWrite}/b2_${fileName}_${chunkKey}`, encodedBatchType2)
-
+        let index = 0;
+        for (let batch of data.newSingles) {
+            if(Object.keys(batch).length === 0) continue;
+            let encodedBatch = encodeSinglesNew(batch);
+            encodedBatch = ethers.utils.concat([ethers.utils.hexlify([0]), encodedBatch])
+            fs.writeFileSync(`${dirPathWrite}/${subdirName}/b_0_${index}`, encodedBatch)
+            index += 1;
         }
 
+        index = 0;
+        for (let batch of data.newGrouped) {
+            if(Object.keys(batch).length === 0) continue;
+            let encodedBatch = encodeGroupsNew(batch);
+            encodedBatch = ethers.utils.concat([ethers.utils.hexlify([1]), encodedBatch])
+            fs.writeFileSync(`${dirPathWrite}/${subdirName}/b_1_${index}`, encodedBatch)
+            index += 1;
+        }
+
+        index = 0;
+        for (let batch of data.repeatingSingles) {
+            if(Object.keys(batch).length === 0) continue;
+            let encodedBatch = encodeSinglesRepeating(batch);
+            encodedBatch = ethers.utils.concat([ethers.utils.hexlify([2]), encodedBatch])
+            fs.writeFileSync(`${dirPathWrite}/${subdirName}/b_2_${index}`, encodedBatch)
+            index += 1;
+        }
+
+        index = 0;
+        for (let batch of data.repeatingGrouped) {
+            if(Object.keys(batch).length === 0) continue;
+            let encodedBatch = encodeGroupsRepeating(batch);
+            encodedBatch = ethers.utils.concat([ethers.utils.hexlify([3]), encodedBatch])
+            fs.writeFileSync(`${dirPathWrite}/${subdirName}/b_3_${index}`, encodedBatch)
+            index += 1;
+        }
     }
 }
 
@@ -109,17 +140,17 @@ const encode = async (dirPathRead, dirPathWrite) => {
 const main = async () => {
     console.log("Encoding data...");
 
-    const dirPathBricksRead = "reddit-data-json/bricks";
+    const dirPathBricksRead = "reddit-data-parsed/bricks";
     const dirPathBricksWrite = "reddit-data-encoded/bricks";
 
-    const dirPathMoonsRead = "reddit-data-json/moons";
+    const dirPathMoonsRead = "reddit-data-parsed/moons";
     const dirPathMoonsWrite = "reddit-data-encoded/moons";
 
     console.log("Encoding bricks data...")
     await encode(dirPathBricksRead, dirPathBricksWrite);
-
-    console.log("Encoding moons data...")
-    await encode(dirPathMoonsRead, dirPathMoonsWrite);
+    //
+    // console.log("Encoding moons data...")
+    // await encode(dirPathMoonsRead, dirPathMoonsWrite);
 
     console.log("Data encoded!")
 
