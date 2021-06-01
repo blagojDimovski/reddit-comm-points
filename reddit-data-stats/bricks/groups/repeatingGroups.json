@@ -1,0 +1,149 @@
+{
+  "289": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "3395"
+    }
+  ],
+  "383": [
+    {
+      "duplicate": true,
+      "subset": false,
+      "groupId": "2026"
+    }
+  ],
+  "618": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "2957"
+    }
+  ],
+  "830": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "4206"
+    }
+  ],
+  "854": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "1557"
+    }
+  ],
+  "1064": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "1966"
+    }
+  ],
+  "1067": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "2929"
+    }
+  ],
+  "1195": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "2268"
+    }
+  ],
+  "1558": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "4050"
+    }
+  ],
+  "1896": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "2652"
+    }
+  ],
+  "1973": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "4221"
+    }
+  ],
+  "1988": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "2581"
+    }
+  ],
+  "2317": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "3405"
+    }
+  ],
+  "2724": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "5366"
+    }
+  ],
+  "2972": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "3845"
+    }
+  ],
+  "3169": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "3411"
+    }
+  ],
+  "3325": [
+    {
+      "duplicate": true,
+      "subset": false,
+      "groupId": "3784"
+    }
+  ],
+  "3349": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "3840"
+    }
+  ],
+  "4217": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "5073"
+    }
+  ],
+  "4473": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "4933"
+    }
+  ],
+  "4908": [
+    {
+      "duplicate": true,
+      "subset": true,
+      "groupId": "4947"
+    }
+  ]
+}

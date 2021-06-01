@@ -58,6 +58,7 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
     address _distributionContract;
 
     address[] public _registeredAccounts;
+    bytes[] public _registeredGroups;
 
     // END OF VARS
     // ------------------------------------------------------------------------------------
@@ -370,11 +371,14 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
             (nextPtr,len) = (data.ptr, data.length);
             num_addresses = readUint(nextPtr,len);
             memPtr += consumed;
+            // create group byte representation and push it to _registeredGroups
+            bytes groupRepresentation;
             for(uint i = 0; i < num_addresses; i++) {
                 read = readUint(memPtr,20);
                 location = address(read);
                 memPtr += 20;
                 _registeredAccounts.push(location);
+                groupRepresentation = groupRepresentation.concat(_registeredAccounts.length - 1);
                 ERC20._mint(location, amount);
             }
         }

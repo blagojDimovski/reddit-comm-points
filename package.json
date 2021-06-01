@@ -43,6 +43,7 @@
     "convertData": "node scripts/convertData.js",
     "parseData": "node scripts/parseData.js",
     "checkState": "node scripts/checkState.js",
-    "decodeTx": "node scripts/decodeTx.js"
+    "decodeTx": "node scripts/decodeTx.js",
+    "makeStats": "node scripts/makeStats.js"
   }
 }

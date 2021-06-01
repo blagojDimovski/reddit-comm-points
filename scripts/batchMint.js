@@ -89,7 +89,7 @@ const main = async () => {
     const batchType2 = 'b2'
     const readDirBricks = 'reddit-data-encoded/bricks'
     const writeDirBricks = 'batch-minting/bricks'
-    const round = 'round_1_finalized'
+    const round = 'round_3_finalized'
 
     await batchMint(readDirBricks, writeDirBricks, round)
 
