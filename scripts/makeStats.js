@@ -10,6 +10,10 @@ const BATCH_TYPE_BYTES = 1;
 const BITMASK_BYTES = 13;
 const GAS_COST_BYTE = 16;
 
+const stringifyBigIntReplacer = (key, value) => {
+    return typeof value === 'bigint' ? value.toString(2) : value;
+};
+
 
 const getMaxGroupFromBatch = (batch) => {
 
@@ -134,6 +138,168 @@ const makeGroups = (dirPathRead, dirPathWrite, index) => {
 }
 
 
+const findItemsInGroupRegistry = (karma, groupRegistry, groupItems) => {
+
+    let groups = {
+        [karma]: {
+            items: [],
+            groupBitmap: BigInt(0),
+            groupSize: groupRegistry[karma].length,
+            numItems: 0
+        }
+    };
+
+    let notFoundItems = [];
+    // prioritize the same karma first
+    for(let item of groupItems) {
+
+        let itemId = groupRegistry[karma].indexOf(item)
+
+        if(itemId >= 0) {
+            groups[karma]['items'].push({item, itemId})
+            groups[karma]['groupBitmap'] |= (BigInt(1) << BigInt(itemId))
+        } else {
+            notFoundItems.push(item);
+        }
+
+    }
+    groups[karma]['numItems'] = groups[karma]['items'].length;
+
+
+    for(let regKarma in groupRegistry) {
+        if(!groupRegistry.hasOwnProperty(regKarma)) continue;
+        if(regKarma === karma) continue;
+        if(notFoundItems.length === 0) break;
+
+        for(let item of notFoundItems) {
+
+            let itemId = groupRegistry[regKarma].indexOf(item)
+
+            if(itemId >= 0) {
+                if(!(regKarma in groups)) {
+                    groups[regKarma] = {
+                        items: [],
+                        groupBitmap: BigInt(0),
+                        groupSize: groupRegistry[regKarma].length,
+                        numItems: 0
+                    };
+                }
+                groups[regKarma]['items'].push({item, itemId})
+                let itemIdNotFound = notFoundItems.indexOf(item);
+                notFoundItems.splice(itemIdNotFound, 1);
+                groups[regKarma]['groupBitmap'] |= (BigInt(1) << BigInt(itemId))
+            }
+        }
+
+        if(regKarma in groups) {
+            groups[regKarma]['numItems'] = groups[regKarma]['numItems'].length
+        }
+
+    }
+    return groups;
+
+
+};
+
+const makeRepeatingGroupStatsGlobalRegistry = (repeatingGroups, globalGroupRegistry, writePath) => {
+
+    let distStats = {
+
+    };
+
+    for (let groupId in repeatingGroups) {
+
+        if (!repeatingGroups.hasOwnProperty(groupId)) continue;
+        let filename = repeatingGroups[groupId].filename;
+        let groupFileIndex = parseInt(filename.split('_')[1]);
+
+        if(groupFileIndex === 1) continue;
+
+        let items = repeatingGroups[groupId].items;
+        let karma = repeatingGroups[groupId].karma;
+
+        let groupRegistryIndex = (groupFileIndex - 1).toString()
+        let groupRegistryPrevDist = globalGroupRegistry[groupRegistryIndex]
+
+        if(!(karma in groupRegistryPrevDist)) {
+            continue;
+        }
+
+        let groupedItems = findItemsInGroupRegistry(karma, groupRegistryPrevDist, items);
+
+        if(!(filename in distStats)) {
+            distStats[filename] = {
+              [groupId]: groupedItems
+            };
+        } else {
+            distStats[filename][groupId] = groupedItems;
+        }
+    }
+    fs.writeFileSync(`${writePath}/allDistStats.json`, JSON.stringify(distStats, stringifyBigIntReplacer));
+
+
+};
+
+const sortRepeatingGroupsBySizeAndAddBitmaps = (repeatingGroups, writePath) => {
+
+  const filteredGroups = [];
+  const bitmapStats = [];
+
+  for (let groupId in repeatingGroups) {
+
+      if (!repeatingGroups.hasOwnProperty(groupId)) continue;
+      if(parseInt(repeatingGroups[groupId].filename.split('_')[1]) === 1) continue;
+
+      let items = repeatingGroups[groupId].items;
+
+      items.sort((first, second) => first - second);
+      let startIndex = items[0];
+      let endIndex = items[items.length - 1];
+      let bitmapSize = endIndex - startIndex;
+      let bitmap = BigInt(0)
+
+      items = items.map(item => item - startIndex);
+      for(let item of items) {
+          bitmap = bitmap | (BigInt(1) << BigInt(item))
+      }
+      repeatingGroups[groupId].bitmapSize = bitmapSize;
+      repeatingGroups[groupId].groupId = groupId;
+      repeatingGroups[groupId].startIndex = startIndex;
+      repeatingGroups[groupId].endIndex = endIndex;
+      filteredGroups.push(repeatingGroups[groupId])
+      bitmapStats.push({
+          numItems: repeatingGroups[groupId].numItems,
+          groupId,
+          startIndex,
+          endIndex,
+          bitmapSize,
+          bitmap
+      })
+  }
+
+  filteredGroups.sort((first, second) => second.numItems - first.numItems);
+  bitmapStats.sort((first, second) => second.bitmapSize - first.bitmapSize);
+
+  fs.writeFileSync(`${writePath}/sortedRepeatingGroups.json`, JSON.stringify(filteredGroups));
+
+
+
+
+  fs.writeFileSync(`${writePath}/bitmapStats.json`, JSON.stringify(bitmapStats, stringifyBigIntReplacer));
+
+  let bitmapAnalysisSample = bitmapStats.map(item => item.bitmap);
+  let bitmapsLargest20 = bitmapAnalysisSample.slice(0, 20);
+  let bitmapsSmallest20 = bitmapAnalysisSample.slice(bitmapAnalysisSample.length - 20);
+  let bitmapMid = Math.round(bitmapAnalysisSample.length / 2);
+  let bitmapsMedium20 = bitmapAnalysisSample.slice(bitmapMid, bitmapMid + 20);
+
+  fs.writeFileSync(`${writePath}/bitmapsLargest20.json`, JSON.stringify(bitmapsLargest20, stringifyBigIntReplacer))
+  fs.writeFileSync(`${writePath}/bitmapsSmallest20.json`, JSON.stringify(bitmapsSmallest20, stringifyBigIntReplacer))
+  fs.writeFileSync(`${writePath}/bitmapsMedium20.json`, JSON.stringify(bitmapsMedium20, stringifyBigIntReplacer))
+
+};
+
+
 const addAddressInGroup = (item, groups, addressIndex) => {
     let addrId = addressIndex[item.address]
     if(!(item.karma in groups)) {
@@ -141,13 +307,6 @@ const addAddressInGroup = (item, groups, addressIndex) => {
     } else {
         groups[item.karma].push(addrId)
     }
-}
-
-const deleteAddrFromIndexById = (addrId, addressIndex) => {
-
-    let key = Object.keys(addressIndex).find(key => addressIndex[key] === addrId)
-    delete addressIndex[key];
-
 }
 
 const makeGroupsWithRepeatingUsersOnly = (dirPathRead, dirPathWrite) => {
@@ -185,8 +344,6 @@ const makeGroupsWithRepeatingUsersOnly = (dirPathRead, dirPathWrite) => {
                     filename: file
                 }
                 groupId++;
-            } else {
-                deleteAddrFromIndexById(groups[karma][0], addressIndex)
             }
         }
 
@@ -196,6 +353,75 @@ const makeGroupsWithRepeatingUsersOnly = (dirPathRead, dirPathWrite) => {
     fs.writeFileSync(`${subdir}/addressIndexFromGrouping.json`, JSON.stringify(addressIndex))
 
 }
+
+
+const addAddressInGroupGlobal = (item, groups, addressIndex) => {
+    let addrId = addressIndex[item.address]
+    if(!(item.karma in groups)) {
+        groups[item.karma] = [addrId]
+    } else {
+        if(!groups[item.karma].includes(addrId)) {
+            groups[item.karma].push(addrId)
+        }
+    }
+}
+
+const makeGroupsWithRepeatingUsersWithGroupRegistry = (dirPathRead, dirPathWrite) => {
+    let subdir = `${dirPathWrite}/groups`
+
+    const files = getFileNames(dirPathRead)
+    const groupStatsMap = {};
+    const addressIndex = {};
+    const groupRegistry = {}; // karma: [addrIds]
+    const globalGroupRegistry = {};
+    let groupId = 0;
+    for (let file of files) {
+        let data = fs.readFileSync(`${dirPathRead}/${file}`)
+        data = JSON.parse(data.toString('utf-8'));
+        let groups = {};
+        for(let item of data) {
+
+            if(!(item.address in addressIndex)) {
+
+                addressIndex[item.address] = Object.keys(addressIndex).length;
+
+                if(file === files[0]) {
+                    addAddressInGroup(item, groups, addressIndex);
+                    addAddressInGroupGlobal(item, groupRegistry, addressIndex);
+                }
+            } else {
+                addAddressInGroup(item, groups, addressIndex);
+                addAddressInGroupGlobal(item, groupRegistry, addressIndex);
+            }
+
+        }
+
+        for(let karma of Object.keys(groups)) {
+            if (groups[karma].length > 1) {
+                groupStatsMap[groupId] = {
+                    karma: karma,
+                    items: groups[karma],
+                    numItems: groups[karma].length,
+                    filename: file
+                }
+                groupId++;
+            }
+        }
+        let fileIndex = file.split("_")[1];
+
+        globalGroupRegistry[fileIndex] = JSON.parse(JSON.stringify(groupRegistry));
+
+
+
+    }
+
+    fs.writeFileSync(`${subdir}/groupsWithOnlyRepeatingUsers.json`, JSON.stringify(groupStatsMap))
+    fs.writeFileSync(`${subdir}/addressIndexFromGrouping.json`, JSON.stringify(addressIndex))
+    fs.writeFileSync(`${subdir}/globalGroupRegistry.json`, JSON.stringify(globalGroupRegistry))
+
+}
+
+
 
 
 const compareGroups = (group1, group2) => {
@@ -548,6 +774,130 @@ const calculateStats = (classifiedItems) => {
     return stats
 }
 
+
+const getNaiveGasCosts = (dirPathRead, writeFilePath) => {
+
+    const files = getFileNames(dirPathRead)
+    const stats = {
+        totalByteSize: 0,
+        totalGasCost: 0
+    }
+
+    for (let file of files) {
+        let data = fs.readFileSync(`${dirPathRead}/${file}`)
+        data = JSON.parse(data.toString('utf-8'));
+        let byteSize = 0;
+        for(let item of data) {
+            if(isSmallNum(item.karma)) {
+                byteSize += SMALL_NUM_BYTES
+            } else {
+                byteSize += MID_NUM_BYTES
+            }
+            byteSize += ADDR_BYTES;
+        }
+
+        stats[file] = {
+            byteSize: byteSize,
+            gasCost: byteSize * GAS_COST_BYTE
+        }
+
+        stats['totalByteSize'] += stats[file]['byteSize']
+        stats['totalGasCost'] += stats[file]['gasCost']
+    }
+
+    fs.writeFileSync(writeFilePath, JSON.stringify(stats))
+
+};
+
+
+const getCompressedGasCosts = (dirPathRead, filePathWrite) => {
+    // TODO
+    let subdir = `${dirPathWrite}/stats`
+
+    const files = getFileNames(dirPathRead)
+    const addressIndex = {};
+    const stats = {
+        global: {
+            gasCosts: {
+                newSingles: 0,
+                newGrouped: 0,
+                repeatedSingles: 0,
+                repeatedMasks: 0
+            },
+            byteSizes: {
+                newSingles: 0,
+                newGrouped: 0,
+                repeatedSingles: 0,
+                repeatedMasks: 0
+            }
+        },
+        dists: {
+
+        }
+
+    }
+
+    for (let file of files) {
+        let data =  fs.readFileSync(`${dirPathRead}/${file}`)
+        data = JSON.parse(data.toString('utf-8'));
+        let classifiedItems = {
+            newSingles: {
+
+            },
+            newGrouped: {
+
+            },
+            repeatedSingles: {
+
+            },
+            repeatedMasks: {
+
+            }
+        };
+        let newItems = [];
+        let repeatingItems = [];
+        for(let item of data) {
+            if(!(item.address in addressIndex)) {
+                newItems.push(item);
+                addressIndex[item.address] = Object.keys(addressIndex).length;
+            } else {
+                repeatingItems.push(item);
+            }
+        }
+
+
+        let {singles, grouped} = groupItems(newItems)
+        classifiedItems.newSingles = singles;
+        classifiedItems.newGrouped = grouped;
+
+
+        let addressMap = (addr) => addressIndex[addr];
+        let res = groupItems(repeatingItems, addressMap)
+        classifiedItems.repeatedSingles = res.singles;
+
+        for(let karma in res.grouped) {
+            let items = res.grouped[karma].slice();
+            classifiedItems.repeatedMasks[karma] = getGroupsForRepeatingUsersPerKarma(karma, items);
+        }
+
+        let distStats = calculateStats(classifiedItems);
+        let distName = file.replace('.json', '')
+        stats.dists[distName] = distStats
+
+        for (let key in distStats.byteSizes) {
+            stats.global.byteSizes[key] += distStats.byteSizes[key]
+            stats.global.gasCosts[key] += distStats.gasCosts[key]
+        }
+
+        fs.writeFileSync(`${subdir}/${file}`, JSON.stringify(classifiedItems, stringifyBigIntReplacer))
+
+    }
+
+    fs.writeFileSync(`${subdir}/statsGlobal.json`, JSON.stringify(stats))
+
+
+};
+
 const makeStatsWithCosts = (dirPathRead, dirPathWrite) => {
 
     let subdir = `${dirPathWrite}/stats`
@@ -627,9 +977,7 @@ const makeStatsWithCosts = (dirPathRead, dirPathWrite) => {
             stats.global.gasCosts[key] += distStats.gasCosts[key]
         }
 
-        fs.writeFileSync(`${subdir}/${file}`, JSON.stringify(classifiedItems, (key, value) => {
-            return typeof value === 'bigint' ? value.toString(2) : value
-        }))
+        fs.writeFileSync(`${subdir}/${file}`, JSON.stringify(classifiedItems, stringifyBigIntReplacer))
 
     }
 
@@ -650,6 +998,17 @@ const main = async () => {
     const dirPathMoonsRead = "reddit-data-parsed/moons";
     const dirPathMoonsWrite = "reddit-data-stats/moons";
 
+    console.log("Getting naive gas costs...")
+    getNaiveGasCosts(dirPathBricksJson, `${dirPathBricksWrite}/stats/naiveGasCosts.json`)
+
+    // TODO:
+    console.log("Getting compressed gas costs...")
+    getCompressedGasCosts(dirPathBricksJson, `${dirPathBricksWrite}/stats/naiveGasCosts.json`)
+
+
+    console.log("Getting naive vs compressed stats and savings...")
+    getNaiveVsCompressedGasCosts();
+
     // console.log("Making bricks stats...")
     // await getStats(dirPathBricksRead, dirPathBricksWrite);
     //
@@ -664,6 +1023,19 @@ const main = async () => {
     //
     // console.log("Making groups from repeating users only...")
     // makeGroupsWithRepeatingUsersOnly(dirPathBricksJson, dirPathBricksWrite);
+    // makeGroupsWithRepeatingUsersWithGroupRegistry(dirPathBricksJson, dirPathBricksWrite);
+
+    // const repeatingGroupsPath = `${dirPathBricksWrite}/groups/groupsWithOnlyRepeatingUsers.json`
+    // const repeatingGroups = JSON.parse(fs.readFileSync(repeatingGroupsPath, 'utf-8'))
+    //
+    // const globalGroupRegistryPath = `${dirPathBricksWrite}/groups/globalGroupRegistry.json`
+    // const globalGroupRegistry = JSON.parse(fs.readFileSync(globalGroupRegistryPath, 'utf-8'))
+    //
+    // console.log("Making group registry stats")
+    // makeRepeatingGroupStatsGlobalRegistry(repeatingGroups, globalGroupRegistry, `${dirPathBricksWrite}/groupRegistryStats`);
+    //
+    // console.log("Sorting repeating groups...")
+    // sortRepeatingGroupsBySizeAndAddBitmaps(repeatingGroups, `${dirPathBricksWrite}/groups`);
 
     // const groupsPathBricks = "reddit-data-stats/bricks/groups/groupsWithOnlyRepeatingUsers.json"
     // const repeatingGroupsPathBricks = "reddit-data-stats/bricks/groups/repeatingGroups.json"
@@ -676,8 +1048,8 @@ const main = async () => {
 
     //
     //
-    console.log("Making bricks stats with costs...")
-    makeStatsWithCosts(dirPathBricksJson, dirPathBricksWrite)
+    // console.log("Making bricks stats with costs...")
+    // makeStatsWithCosts(dirPathBricksJson, dirPathBricksWrite)
 
 
 };

@@ -3702,6 +3702,11 @@ fast-levenshtein@^2.0.6:
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz#3d8a5c66883a16a30ca8643e851f19baa7797917"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
 
+fastintcompression@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/fastintcompression/-/fastintcompression-0.0.4.tgz#59db6bbdb703724550e56eb8c49c95aad40073e8"
+  integrity sha512-sRtejNHcWjJl0Fr+gsbybbgOKKj0sQYvv7rA787EbeFu1fMpmzjHuBW8fLBImSZeqDuR++TZU2n60mRrpAUR9g==
+
 fetch-ponyfill@^4.0.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/fetch-ponyfill/-/fetch-ponyfill-4.1.0.tgz#ae3ce5f732c645eab87e4ae8793414709b239893"
@@ -7715,6 +7720,11 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
+
+typedfastbitset@^0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/typedfastbitset/-/typedfastbitset-0.3.1.tgz#44cf47568b108a25ccb4b7b57d8643e1bfecf5a3"
+  integrity sha512-LFo+NdRudqxiC1P+WwmhyQHzq7Hm87K3digScojX+7TLc/2g197O1lh4OPrk8edKpAzRfDtfgRyF6cznkebqIg==
 
 typewise-core@^1.2, typewise-core@^1.2.0:
   version "1.2.0"

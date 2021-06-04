@@ -1,0 +1,56 @@
+{
+  "totalByteSize": 2501570,
+  "totalGasCost": 40025120,
+  "round_1_finalized.json": {
+    "byteSize": 168392,
+    "gasCost": 2694272
+  },
+  "round_2_finalized.json": {
+    "byteSize": 226758,
+    "gasCost": 3628128
+  },
+  "round_3_finalized.json": {
+    "byteSize": 211840,
+    "gasCost": 3389440
+  },
+  "round_4_finalized.json": {
+    "byteSize": 249328,
+    "gasCost": 3989248
+  },
+  "round_5_finalized.json": {
+    "byteSize": 217002,
+    "gasCost": 3472032
+  },
+  "round_6_finalized.json": {
+    "byteSize": 185965,
+    "gasCost": 2975440
+  },
+  "round_7_finalized.json": {
+    "byteSize": 176619,
+    "gasCost": 2825904
+  },
+  "round_8_finalized.json": {
+    "byteSize": 217718,
+    "gasCost": 3483488
+  },
+  "round_9_finalized.json": {
+    "byteSize": 163905,
+    "gasCost": 2622480
+  },
+  "round_10_finalized.json": {
+    "byteSize": 159591,
+    "gasCost": 2553456
+  },
+  "round_11_finalized.json": {
+    "byteSize": 176958,
+    "gasCost": 2831328
+  },
+  "round_12_finalized.json": {
+    "byteSize": 193987,
+    "gasCost": 3103792
+  },
+  "round_13_finalized.json": {
+    "byteSize": 153507,
+    "gasCost": 2456112
+  }
+}

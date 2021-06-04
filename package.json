@@ -28,7 +28,9 @@
     "arb-ts": "^0.0.13",
     "dotenv": "^10.0.0",
     "rlp": "^2.2.6",
-    "csv-parser": "^3.0.0"
+    "csv-parser": "^3.0.0",
+    "fastintcompression": "^0.0.4",
+    "typedfastbitset": "^0.3.1"
   },
   "scripts": {
     "chain": "hardhat node",
@@ -44,6 +46,7 @@
     "parseData": "node scripts/parseData.js",
     "checkState": "node scripts/checkState.js",
     "decodeTx": "node scripts/decodeTx.js",
-    "makeStats": "node scripts/makeStats.js"
+    "makeStats": "node scripts/makeStats.js",
+    "testCompression": "node scripts/testCompression.js"
   }
 }
