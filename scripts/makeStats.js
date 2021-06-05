@@ -2,6 +2,8 @@
 const fs = require("fs");
 const {  ethers } = require("hardhat");
 const {getFileNames} = require('./utils')
+const yargs = require('yargs');
+
 
 const ADDR_BYTES = 20;
 const SMALL_NUM_BYTES = 1;
@@ -13,6 +15,14 @@ const GAS_COST_BYTE = 16;
 const stringifyBigIntReplacer = (key, value) => {
     return typeof value === 'bigint' ? value.toString(2) : value;
 };
+
+const dirPathBricksRead = "reddit-data-parsed/bricks";
+const dirPathBricksJson = 'reddit-data-json/bricks'
+const dirPathBricksWrite = "reddit-data-stats/bricks";
+
+const dirPathMoonsRead = "reddit-data-parsed/moons";
+const dirPathMoonsJson = 'reddit-data-json/bricks'
+const dirPathMoonsWrite = "reddit-data-stats/moons";
 
 
 const getMaxGroupFromBatch = (batch) => {
@@ -662,6 +672,7 @@ const calculateStats = (classifiedItems) => {
     // newSingles = 1 byte + (20 bytes + 1 or 3 bytes) * numAddresses
     // newGrouped = 1 byte + (1 or 3 bytes + 1 or 3 bytes + numAddr * 20 bytes) * numGroups
     // repeatingSingles = 1 byte + (1 or 3 bytes + 1 or 3 bytes) * numAddresses
+    // repeatingGroups = 1 byte + (1 or 3 bytes + 1 or 3 bytes + numAddr * (1 or 3 bytes)) * numGroups
     // repeatingMasks = 1 byte + (1 or 3 bytes + 1 or 3 bytes + (1 or 3 bytes + 13 bytes) * numGroupsInKarma) * numGroups
 
     // newSingles
@@ -670,13 +681,17 @@ const calculateStats = (classifiedItems) => {
             newSingles: 0,
             newGrouped: 0,
             repeatedSingles: 0,
-            repeatedMasks: 0
+            repeatedMasks: 0,
+            repeatedGrouped: 0,
+            total: 0
         },
         byteSizes: {
             newSingles: 0,
             newGrouped: 0,
             repeatedSingles: 0,
-            repeatedMasks: 0
+            repeatedMasks: 0,
+            repeatedGrouped: 0,
+            total: 0
         }
     }
 
@@ -712,7 +727,6 @@ const calculateStats = (classifiedItems) => {
         stats.byteSizes.newGrouped += byteSize
     }
 
-
     // repeating singles
     for(let addrId in classifiedItems.repeatedSingles) {
         let byteSize = 0;
@@ -729,6 +743,34 @@ const calculateStats = (classifiedItems) => {
         }
 
         stats.byteSizes.repeatedSingles += byteSize;
+    }
+
+    // the classifiedItems obj can have repeatedGrouped or repeatedMasks
+    // repeating grouped
+    for(let karma in classifiedItems.repeatedGrouped) {
+        let byteSize = 0;
+        let items = classifiedItems.repeatedGrouped[karma];
+        if(isSmallNum(karma)) {
+            byteSize += SMALL_NUM_BYTES;
+        } else {
+            byteSize += MID_NUM_BYTES;
+        }
+
+        if(isSmallNum(items.length)) {
+            byteSize += SMALL_NUM_BYTES;
+        } else {
+            byteSize += MID_NUM_BYTES;
+        }
+
+        for (let item of items) {
+            if(isSmallNum(item)) {
+                byteSize += SMALL_NUM_BYTES;
+            } else {
+                byteSize += MID_NUM_BYTES;
+            }
+        }
+
+        stats.byteSizes.repeatedGrouped += byteSize
     }
 
     // repeating masks
@@ -768,6 +810,8 @@ const calculateStats = (classifiedItems) => {
         if(stats.byteSizes[key] > 0) {
             stats.byteSizes[key] += 1;
             stats.gasCosts[key] = GAS_COST_BYTE * stats.byteSizes[key];
+            stats.byteSizes.total += stats.byteSizes[key];
+            stats.gasCosts.total += stats.gasCosts[key];
         }
     }
 
@@ -775,17 +819,25 @@ const calculateStats = (classifiedItems) => {
 }
 
 
-const getNaiveGasCosts = (dirPathRead, writeFilePath) => {
+const getNaiveGasCostStats = (fileData) => {
 
-    const files = getFileNames(dirPathRead)
     const stats = {
-        totalByteSize: 0,
-        totalGasCost: 0
+        global: {
+            gasCosts: {
+                total: 0,
+            },
+            byteSizes: {
+                total: 0
+            }
+        },
+        dists: {
+
+        }
+
     }
 
-    for (let file of files) {
-        let data = fs.readFileSync(`${dirPathRead}/${file}`)
-        data = JSON.parse(data.toString('utf-8'));
+    for (let file in fileData) {
+        let data = fileData[file];
         let byteSize = 0;
         for(let item of data) {
             if(isSmallNum(item.karma)) {
@@ -795,26 +847,26 @@ const getNaiveGasCosts = (dirPathRead, writeFilePath) => {
             }
             byteSize += ADDR_BYTES;
         }
-
-        stats[file] = {
-            byteSize: byteSize,
-            gasCost: byteSize * GAS_COST_BYTE
+        let distName = file.replace('.json', '')
+        stats.dists[distName] = {
+            gasCosts: {
+                total: byteSize * GAS_COST_BYTE
+            },
+            byteSizes: {
+                total: byteSize
+            }
         }
 
-        stats['totalByteSize'] += stats[file]['byteSize']
-        stats['totalGasCost'] += stats[file]['gasCost']
+        stats.global.byteSizes.total += stats.dists[distName].byteSizes.total
+        stats.global.gasCosts.total += stats.dists[distName].gasCosts.total
     }
 
-    fs.writeFileSync(writeFilePath, JSON.stringify(stats))
-
+    return stats;
 };
 
 
-const getCompressedGasCosts = (dirPathRead, filePathWrite) => {
-    // TODO
-    let subdir = `${dirPathWrite}/stats`
+const getCompressedGasCostStats = (fileData) => {
 
-    const files = getFileNames(dirPathRead)
     const addressIndex = {};
     const stats = {
         global: {
@@ -822,13 +874,17 @@ const getCompressedGasCosts = (dirPathRead, filePathWrite) => {
                 newSingles: 0,
                 newGrouped: 0,
                 repeatedSingles: 0,
-                repeatedMasks: 0
+                repeatedMasks: 0,
+                repeatedGrouped: 0,
+                total: 0,
             },
             byteSizes: {
                 newSingles: 0,
                 newGrouped: 0,
                 repeatedSingles: 0,
-                repeatedMasks: 0
+                repeatedMasks: 0,
+                repeatedGrouped: 0,
+                total: 0
             }
         },
         dists: {
@@ -837,9 +893,8 @@ const getCompressedGasCosts = (dirPathRead, filePathWrite) => {
 
     }
 
-    for (let file of files) {
-        let data =  fs.readFileSync(`${dirPathRead}/${file}`)
-        data = JSON.parse(data.toString('utf-8'));
+    for (let file in fileData) {
+        let data =  fileData[file];
         let classifiedItems = {
             newSingles: {
 
@@ -848,6 +903,92 @@ const getCompressedGasCosts = (dirPathRead, filePathWrite) => {
 
             },
             repeatedSingles: {
+
+            },
+            repeatedMasks: {
+
+            },
+            repeatedGrouped: {
+
+            }
+        };
+        let newItems = [];
+        let repeatingItems = [];
+        for(let item of data) {
+            if(!(item.address in addressIndex)) {
+                newItems.push(item);
+                addressIndex[item.address] = Object.keys(addressIndex).length;
+            } else {
+                repeatingItems.push(item);
+            }
+        }
+
+        let {singles, grouped} = groupItems(newItems)
+        classifiedItems.newSingles = singles;
+        classifiedItems.newGrouped = grouped;
+
+
+        let addressMap = (addr) => addressIndex[addr];
+        let res = groupItems(repeatingItems, addressMap)
+        classifiedItems.repeatedSingles = res.singles;
+        classifiedItems.repeatedGrouped = res.grouped;
+
+
+        let distStats = calculateStats(classifiedItems);
+        let distName = file.replace('.json', '')
+        stats.dists[distName] = distStats
+
+        for (let key in distStats.byteSizes) {
+            stats.global.byteSizes[key] += distStats.byteSizes[key]
+            stats.global.gasCosts[key] += distStats.gasCosts[key]
+        }
+    }
+
+    return stats;
+
+};
+
+const getMasksGasCostStats = (fileData) => {
+
+    const addressIndex = {};
+    const stats = {
+        global: {
+            gasCosts: {
+                newSingles: 0,
+                newGrouped: 0,
+                repeatedSingles: 0,
+                repeatedGrouped: 0,
+                repeatedMasks: 0,
+                total: 0,
+            },
+            byteSizes: {
+                newSingles: 0,
+                newGrouped: 0,
+                repeatedSingles: 0,
+                repeatedGrouped: 0,
+                repeatedMasks: 0,
+                total: 0
+            }
+        },
+        dists: {
+
+        }
+
+    }
+
+    for (let file in fileData) {
+        let data =  fileData[file];
+        let classifiedItems = {
+            newSingles: {
+
+            },
+            newGrouped: {
+
+            },
+            repeatedSingles: {
+
+            },
+            repeatedGrouped: {
 
             },
             repeatedMasks: {
@@ -889,125 +1030,156 @@ const getCompressedGasCosts = (dirPathRead, filePathWrite) => {
             stats.global.gasCosts[key] += distStats.gasCosts[key]
         }
 
-        fs.writeFileSync(`${subdir}/${file}`, JSON.stringify(classifiedItems, stringifyBigIntReplacer))
 
     }
 
-    fs.writeFileSync(`${subdir}/statsGlobal.json`, JSON.stringify(stats))
+    return stats;
 
 
 };
 
-const makeStatsWithCosts = (dirPathRead, dirPathWrite) => {
 
-    let subdir = `${dirPathWrite}/stats`
+const compareGasCosts = (stats) => {
+    /***
+     * gasCosts has the following structure: {
+     *     'naive': {
+     *         global:{
+     *             gasCosts: {
+     *                 total: 1
+     *             },
+     *             byteSizes: {
+     *                 total: 1
+     *             }
+     *         },
+     *         dists: {...}
+     *     },
+     *     'compressed': {
+     *         global: {
+     *             gasCosts: {
+     *                 total: 1,
+     *             },
+     *             byteSizes: {
+     *                 total: 1
+     *             }
+     *         },
+     *         dists: {...}
+     *     },
+     *     ...
+     * }
+     *
+     * **/
 
-    const files = getFileNames(dirPathRead)
-    const addressIndex = {};
-    const stats = {
-        global: {
-            gasCosts: {
-                newSingles: 0,
-                newGrouped: 0,
-                repeatedSingles: 0,
-                repeatedMasks: 0
-            },
-            byteSizes: {
-                newSingles: 0,
-                newGrouped: 0,
-                repeatedSingles: 0,
-                repeatedMasks: 0
+    let statKeys = Object.keys(stats);
+    let statsComputed = {
+
+    };
+    for(let i = 0; i < statKeys.length; i++) {
+
+        let statI = stats[statKeys[i]];
+
+        for (let j = i + 1; j < statKeys.length; j++) {
+            let statJ = stats[statKeys[j]];
+
+            let compKey = `${statKeys[i]}_${statKeys[j]}`
+            let gcSaving = statI.global.gasCosts.total - statJ.global.gasCosts.total;
+            let gcSavingP = (gcSaving / statI.global.gasCosts.total) * 100;
+            let bsSaving = statI.global.byteSizes.total - statJ.global.byteSizes.total;
+            let bsSavingP = (bsSaving / statI.global.byteSizes.total) * 100;
+            let compObj = {
+                global: {
+                    gasCosts: {
+                        saving: gcSaving,
+                        savingPercent: gcSavingP
+                    },
+                    byteSizes: {
+                        saving: bsSaving,
+                        savingPercent: bsSavingP
+                    }
+                },
+                dists: {}
             }
-        },
-        dists: {
+
+            for (let distKey in statJ.dists) {
+
+                let gcSavingDist = statI.dists[distKey].gasCosts.total - statJ.dists[distKey].gasCosts.total;
+                let gcSavingDistP = (gcSaving / statI.dists[distKey].gasCosts.total) * 100;
+                let bsSavingDist = statI.dists[distKey].byteSizes.total - statJ.dists[distKey].byteSizes.total;
+                let bsSavingDistP = (bsSaving / statI.dists[distKey].byteSizes.total) * 100;
+
+                compObj.dists[distKey] = {
+                    gasCosts: {
+                        saving: gcSavingDist,
+                        savingPercent: gcSavingDistP
+                    },
+                    byteSizes: {
+                        saving: bsSavingDist,
+                        savingPercent: bsSavingDistP
+                    }
+                }
+
+            }
+            statsComputed[compKey] = compObj
 
         }
 
+
     }
+
+
+    return statsComputed;
+
+
+};
+
+
+const readFiles = (dirPathRead) => {
+    const files = getFileNames(dirPathRead)
+    const fileData = {};
 
     for (let file of files) {
-        let data =  fs.readFileSync(`${dirPathRead}/${file}`)
+        let data = fs.readFileSync(`${dirPathRead}/${file}`)
         data = JSON.parse(data.toString('utf-8'));
-        let classifiedItems = {
-            newSingles: {
-
-            },
-            newGrouped: {
-
-            },
-            repeatedSingles: {
-
-            },
-            repeatedMasks: {
-
-            }
-        };
-        let newItems = [];
-        let repeatingItems = [];
-        for(let item of data) {
-            if(!(item.address in addressIndex)) {
-                newItems.push(item);
-                addressIndex[item.address] = Object.keys(addressIndex).length;
-            } else {
-                repeatingItems.push(item);
-            }
-        }
-
-
-        let {singles, grouped} = groupItems(newItems)
-        classifiedItems.newSingles = singles;
-        classifiedItems.newGrouped = grouped;
-
-
-        let addressMap = (addr) => addressIndex[addr];
-        let res = groupItems(repeatingItems, addressMap)
-        classifiedItems.repeatedSingles = res.singles;
-
-        for(let karma in res.grouped) {
-            let items = res.grouped[karma].slice();
-            classifiedItems.repeatedMasks[karma] = getGroupsForRepeatingUsersPerKarma(karma, items);
-        }
-
-        let distStats = calculateStats(classifiedItems);
-        let distName = file.replace('.json', '')
-        stats.dists[distName] = distStats
-
-        for (let key in distStats.byteSizes) {
-            stats.global.byteSizes[key] += distStats.byteSizes[key]
-            stats.global.gasCosts[key] += distStats.gasCosts[key]
-        }
-
-        fs.writeFileSync(`${subdir}/${file}`, JSON.stringify(classifiedItems, stringifyBigIntReplacer))
-
+        fileData[file] = data;
     }
+    return fileData;
+}
 
-    fs.writeFileSync(`${subdir}/statsGlobal.json`, JSON.stringify(stats))
+const writeToFile = (filePath, obj) => {
 
+    fs.writeFileSync(filePath, JSON.stringify(obj, stringifyBigIntReplacer))
 
-};
+}
 
+const readFromFile = (filePath) => {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+}
 
-
-const main = async () => {
+const main = () => {
     console.log("Making group stats...");
 
-    const dirPathBricksRead = "reddit-data-parsed/bricks";
-    const dirPathBricksJson = 'reddit-data-json/bricks'
-    const dirPathBricksWrite = "reddit-data-stats/bricks";
+    let brickFileData = readFiles(dirPathBricksJson);
 
-    const dirPathMoonsRead = "reddit-data-parsed/moons";
-    const dirPathMoonsWrite = "reddit-data-stats/moons";
+    console.log("[BRICKS] Calculating naive gas costs...")
+    let naiveGasCosts = getNaiveGasCostStats(brickFileData)
+    writeToFile(`${dirPathBricksWrite}/stats/naiveGasCosts.json`, naiveGasCosts)
 
-    console.log("Getting naive gas costs...")
-    getNaiveGasCosts(dirPathBricksJson, `${dirPathBricksWrite}/stats/naiveGasCosts.json`)
+    console.log("[BRICKS] Calculating compressed gas costs...")
+    let compressedGasCosts = getCompressedGasCostStats(brickFileData)
+    writeToFile(`${dirPathBricksWrite}/stats/compressedGasCosts.json`, compressedGasCosts)
 
-    // TODO:
-    console.log("Getting compressed gas costs...")
-    getCompressedGasCosts(dirPathBricksJson, `${dirPathBricksWrite}/stats/naiveGasCosts.json`)
+    console.log("[BRICKS] Calculating masks gas costs...")
+    let compressedMasksGasCosts = getMasksGasCostStats(brickFileData)
+    writeToFile(`${dirPathBricksWrite}/stats/compressedMasksGasCosts.json`, compressedMasksGasCosts)
 
 
-    console.log("Getting naive vs compressed stats and savings...")
-    getNaiveVsCompressedGasCosts();
+    console.log("[BRICKS] Making gas cost comparisons...")
+    let costsObj = {
+        '0': naiveGasCosts,
+        '1': compressedGasCosts,
+        '2': compressedMasksGasCosts
+    }
+    let savingStats = compareGasCosts(costsObj);
+    writeToFile(`${dirPathBricksWrite}/stats/savings.json`, savingStats)
 
     // console.log("Making bricks stats...")
     // await getStats(dirPathBricksRead, dirPathBricksWrite);
@@ -1050,13 +1222,124 @@ const main = async () => {
     //
     // console.log("Making bricks stats with costs...")
     // makeStatsWithCosts(dirPathBricksJson, dirPathBricksWrite)
-
-
 };
 
-main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
+const computeStats = (argv) => {
+
+    let filePathRead;
+    let filePathWrite;
+    let dataset = argv.dataset.toUpperCase();
+
+    switch(dataset) {
+        case 'BRICKS':
+            filePathRead = dirPathBricksJson
+            filePathWrite = dirPathBricksWrite
+            break;
+        case 'MOONS':
+            fileDataPath = dirPathMoonsJson
+            filePathWrite = dirPathMoonsWrite
+            break;
+        default:
+            fileDataPath = dirPathBricksJson
+            filePathWrite = dirPathBricksWrite
+    }
+
+    let fileData = readFiles(filePathRead);
+
+    let costsObj = {
+
+    }
+
+    if(argv.naive) {
+        console.log(`[${dataset}] Calculating naive gas costs...`)
+        let naiveGasCosts;
+        let naiveGasCostsPath = `${filePathWrite}/stats/naiveGasCosts.json`;
+        if(argv.cache) {
+            naiveGasCosts = readFromFile(naiveGasCostsPath)
+        } else {
+            naiveGasCosts = getNaiveGasCostStats(fileData)
+            writeToFile(naiveGasCostsPath, naiveGasCosts)
+        }
+
+        costsObj['naive'] = naiveGasCosts;
+
+    }
+
+    if(argv.compressed) {
+        console.log(`[${dataset}] Calculating compressed gas costs...`)
+        let compressedGasCosts;
+        let compressedGasCostsPath = `${filePathWrite}/stats/compressedGasCosts.json`;
+
+        if(argv.cache) {
+            compressedGasCosts = readFromFile(compressedGasCostsPath);
+        } else {
+            compressedGasCosts = getCompressedGasCostStats(fileData)
+            writeToFile(compressedGasCostsPath, compressedGasCosts)
+        }
+        costsObj['compressed'] = compressedGasCosts
+    }
+
+    if(argv.compressedMasks) {
+        console.log(`[${dataset}] Calculating compressed bitmasks gas costs...`)
+        let compressedMasksGasCosts;
+        let compressedMasksGasCostsPath = `${filePathWrite}/stats/compressedMasksGasCosts.json`;
+
+        if(argv.cache) {
+            compressedMasksGasCosts = readFromFile(compressedMasksGasCostsPath);
+        } else {
+            compressedMasksGasCosts = getCompressedGasCostStats(fileData)
+            writeToFile(compressedMasksGasCostsPath, compressedMasksGasCosts)
+        }
+        costsObj['compressedMasks'] = compressedMasksGasCosts
+    }
+
+    let savingStats = compareGasCosts(costsObj);
+    writeToFile(`${filePathWrite}/stats/savings.json`, savingStats)
+    console.log(`[${dataset}] Savings calculated and written to file`);
+}
+
+
+const argv = yargs
+    .command('computeStats', 'Tells whether an year is leap year or not', {
+        dataset: {
+            description: 'the dataset to check for',
+            alias: 'd',
+            type: 'string',
+            default: 'bricks'
+        },
+        naive: {
+            description: 'calculate naive gas costs',
+            alias: 'n',
+            type: 'boolean',
+            default: true
+        },
+        compressed: {
+            description: 'calculate compressed gas costs',
+            alias: 'cmp',
+            type: 'boolean',
+            default: true
+        },
+        compressedMasks: {
+            description: 'calculate compressed bitmask gas costs',
+            alias: 'cmpb',
+            type: 'boolean',
+            default: true
+        },
+
+    })
+    .option('cache', {
+        alias: 'c',
+        description: 'use cached results',
+        type: 'boolean',
+        default: false
+    })
+    .help()
+    .alias('help', 'h')
+    .argv;
+
+
+if (argv._.includes('computeStats')) {
+    computeStats(argv);
+} else {
+    main();
+}
