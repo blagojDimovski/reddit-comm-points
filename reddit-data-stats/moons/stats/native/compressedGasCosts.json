@@ -1,0 +1,256 @@
+{
+  "global": {
+    "gasCosts": {
+      "newSingles": 824960,
+      "newGrouped": 15501760,
+      "repeatedSingles": 288272,
+      "repeatedMasks": 0,
+      "repeatedGrouped": 1933552,
+      "total": 18548544
+    },
+    "byteSizes": {
+      "newSingles": 51560,
+      "newGrouped": 968860,
+      "repeatedSingles": 18017,
+      "repeatedMasks": 0,
+      "repeatedGrouped": 120847,
+      "total": 1159284
+    }
+  },
+  "dists": {
+    "round_1_finalized": {
+      "gasCosts": {
+        "newSingles": 49872,
+        "newGrouped": 677440,
+        "repeatedSingles": 0,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 0,
+        "total": 727312
+      },
+      "byteSizes": {
+        "newSingles": 3117,
+        "newGrouped": 42340,
+        "repeatedSingles": 0,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 0,
+        "total": 45457
+      }
+    },
+    "round_2_finalized": {
+      "gasCosts": {
+        "newSingles": 18672,
+        "newGrouped": 214544,
+        "repeatedSingles": 5088,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 31232,
+        "total": 269536
+      },
+      "byteSizes": {
+        "newSingles": 1167,
+        "newGrouped": 13409,
+        "repeatedSingles": 318,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 1952,
+        "total": 16846
+      }
+    },
+    "round_3_finalized": {
+      "gasCosts": {
+        "newSingles": 19136,
+        "newGrouped": 247776,
+        "repeatedSingles": 7344,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 40928,
+        "total": 315184
+      },
+      "byteSizes": {
+        "newSingles": 1196,
+        "newGrouped": 15486,
+        "repeatedSingles": 459,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 2558,
+        "total": 19699
+      }
+    },
+    "round_4_finalized": {
+      "gasCosts": {
+        "newSingles": 20400,
+        "newGrouped": 239888,
+        "repeatedSingles": 7552,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 48208,
+        "total": 316048
+      },
+      "byteSizes": {
+        "newSingles": 1275,
+        "newGrouped": 14993,
+        "repeatedSingles": 472,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 3013,
+        "total": 19753
+      }
+    },
+    "round_5_finalized": {
+      "gasCosts": {
+        "newSingles": 23184,
+        "newGrouped": 387776,
+        "repeatedSingles": 8832,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 50608,
+        "total": 470400
+      },
+      "byteSizes": {
+        "newSingles": 1449,
+        "newGrouped": 24236,
+        "repeatedSingles": 552,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 3163,
+        "total": 29400
+      }
+    },
+    "round_6_finalized": {
+      "gasCosts": {
+        "newSingles": 26720,
+        "newGrouped": 378672,
+        "repeatedSingles": 11328,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 68400,
+        "total": 485120
+      },
+      "byteSizes": {
+        "newSingles": 1670,
+        "newGrouped": 23667,
+        "repeatedSingles": 708,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 4275,
+        "total": 30320
+      }
+    },
+    "round_7_finalized": {
+      "gasCosts": {
+        "newSingles": 33584,
+        "newGrouped": 314256,
+        "repeatedSingles": 18672,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 87632,
+        "total": 454144
+      },
+      "byteSizes": {
+        "newSingles": 2099,
+        "newGrouped": 19641,
+        "repeatedSingles": 1167,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 5477,
+        "total": 28384
+      }
+    },
+    "round_8_finalized": {
+      "gasCosts": {
+        "newSingles": 34784,
+        "newGrouped": 354256,
+        "repeatedSingles": 19376,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 98352,
+        "total": 506768
+      },
+      "byteSizes": {
+        "newSingles": 2174,
+        "newGrouped": 22141,
+        "repeatedSingles": 1211,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 6147,
+        "total": 31673
+      }
+    },
+    "round_9_finalized": {
+      "gasCosts": {
+        "newSingles": 85232,
+        "newGrouped": 859664,
+        "repeatedSingles": 30240,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 132432,
+        "total": 1107568
+      },
+      "byteSizes": {
+        "newSingles": 5327,
+        "newGrouped": 53729,
+        "repeatedSingles": 1890,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 8277,
+        "total": 69223
+      }
+    },
+    "round_10_finalized": {
+      "gasCosts": {
+        "newSingles": 134336,
+        "newGrouped": 2275440,
+        "repeatedSingles": 36896,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 180048,
+        "total": 2626720
+      },
+      "byteSizes": {
+        "newSingles": 8396,
+        "newGrouped": 142215,
+        "repeatedSingles": 2306,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 11253,
+        "total": 164170
+      }
+    },
+    "round_11_finalized": {
+      "gasCosts": {
+        "newSingles": 126304,
+        "newGrouped": 2301376,
+        "repeatedSingles": 45280,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 304576,
+        "total": 2777536
+      },
+      "byteSizes": {
+        "newSingles": 7894,
+        "newGrouped": 143836,
+        "repeatedSingles": 2830,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 19036,
+        "total": 173596
+      }
+    },
+    "round_12_finalized": {
+      "gasCosts": {
+        "newSingles": 90320,
+        "newGrouped": 2156416,
+        "repeatedSingles": 43152,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 358480,
+        "total": 2648368
+      },
+      "byteSizes": {
+        "newSingles": 5645,
+        "newGrouped": 134776,
+        "repeatedSingles": 2697,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 22405,
+        "total": 165523
+      }
+    },
+    "round_13_finalized": {
+      "gasCosts": {
+        "newSingles": 162416,
+        "newGrouped": 5094256,
+        "repeatedSingles": 54512,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 532656,
+        "total": 5843840
+      },
+      "byteSizes": {
+        "newSingles": 10151,
+        "newGrouped": 318391,
+        "repeatedSingles": 3407,
+        "repeatedMasks": 0,
+        "repeatedGrouped": 33291,
+        "total": 365240
+      }
+    }
+  }
+}

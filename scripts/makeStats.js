@@ -6,11 +6,12 @@ const yargs = require('yargs');
 
 
 const ADDR_BYTES = 20;
-const SMALL_NUM_BYTES = 1;
-const MID_NUM_BYTES = 3;
+const RLP_SINGLE_DIGIT_BYTES = 1;
+const RLP_MULTI_DIGIT_BYTES = 3;
 const BATCH_TYPE_BYTES = 1;
 const BITMASK_BYTES = 13;
 const GAS_COST_BYTE = 16;
+
 
 const stringifyBigIntReplacer = (key, value) => {
     return typeof value === 'bigint' ? value.toString(2) : value;
@@ -19,10 +20,12 @@ const stringifyBigIntReplacer = (key, value) => {
 const dirPathBricksRead = "reddit-data-parsed/bricks";
 const dirPathBricksJson = 'reddit-data-json/bricks'
 const dirPathBricksWrite = "reddit-data-stats/bricks";
+const dirPathBricksWriteStats = "reddit-data-stats/bricks/stats";
 
 const dirPathMoonsRead = "reddit-data-parsed/moons";
-const dirPathMoonsJson = 'reddit-data-json/bricks'
+const dirPathMoonsJson = 'reddit-data-json/moons'
 const dirPathMoonsWrite = "reddit-data-stats/moons";
+const dirPathMoonsWriteStats = "reddit-data-stats/moons/stats";
 
 
 const getMaxGroupFromBatch = (batch) => {
@@ -650,7 +653,7 @@ const getGroupsForRepeatingUsersPerKarma = (karma, items) => {
         let bitmapPosition = item % 100;
         if (groupId in groups) {
             groups[groupId].items.push(item);
-            groups[groupId].bitmap = groups[groupId].bitmap | BigInt(1) << BigInt(bitmapPosition);
+            groups[groupId].bitmap = groups[groupId].bitmap | (BigInt(1) << BigInt(bitmapPosition));
         } else {
             groups[groupId] = {
                 items: [item],
@@ -662,20 +665,24 @@ const getGroupsForRepeatingUsersPerKarma = (karma, items) => {
 
 }
 
-
-const isSmallNum = (num) => {
-    return parseInt(num) < 128;
+const getByteSize = (num, mode= "rlp") => {
+    // get byte size for num (karma) up to 2 bytes
+    num = parseInt(num)
+    if(mode === "rlp") {
+        return num < 128 ? RLP_SINGLE_DIGIT_BYTES : RLP_MULTI_DIGIT_BYTES;
+    } else {
+        return num < 256 ? 1 : 2;
+    }
 }
 
-const calculateStats = (classifiedItems) => {
+const calculateStats = (classifiedItems, mode="rlp") => {
 
     // newSingles = 1 byte + (20 bytes + 1 or 3 bytes) * numAddresses
     // newGrouped = 1 byte + (1 or 3 bytes + 1 or 3 bytes + numAddr * 20 bytes) * numGroups
     // repeatingSingles = 1 byte + (1 or 3 bytes + 1 or 3 bytes) * numAddresses
     // repeatingGroups = 1 byte + (1 or 3 bytes + 1 or 3 bytes + numAddr * (1 or 3 bytes)) * numGroups
-    // repeatingMasks = 1 byte + (1 or 3 bytes + 1 or 3 bytes + (1 or 3 bytes + 13 bytes) * numGroupsInKarma) * numGroups
+    // repeatingMasks = 1 byte + (1 or 3 bytes + 1 or 3 bytes + (1 or 3 bytes + 13 bytes) * numGroupsForKarma) * numGroups == (BATCH_ID + (KARMA + NUM_GROUPS + (GROUP_ID + GROUP_BITMASK) * numGroupsForKarma) * numGroups
 
-    // newSingles
     let stats = {
         gasCosts: {
             newSingles: 0,
@@ -697,77 +704,36 @@ const calculateStats = (classifiedItems) => {
 
     // new singles
     for(let addr in classifiedItems.newSingles) {
-        let byteSize = 0;
-        if(isSmallNum(classifiedItems.newSingles[addr])) {
-            byteSize += SMALL_NUM_BYTES
-        } else {
-            byteSize += MID_NUM_BYTES
-        }
+        let byteSize = getByteSize(classifiedItems.newSingles[addr], mode);
         byteSize += ADDR_BYTES;
         stats.byteSizes.newSingles += byteSize;
     }
 
     // new grouped
     for(let karma in classifiedItems.newGrouped) {
-        let byteSize = 0;
         let items = classifiedItems.newGrouped[karma];
-        if(isSmallNum(karma)) {
-            byteSize += SMALL_NUM_BYTES;
-        } else {
-            byteSize += MID_NUM_BYTES;
-        }
+        let byteSize = getByteSize(karma, mode);
+        byteSize += getByteSize(items.length, mode)
 
-        if(isSmallNum(items.length)) {
-            byteSize += SMALL_NUM_BYTES;
-        } else {
-            byteSize += MID_NUM_BYTES;
-        }
-
-        byteSize += ADDR_BYTES * items.length;
+        byteSize += (ADDR_BYTES * items.length);
         stats.byteSizes.newGrouped += byteSize
     }
 
     // repeating singles
     for(let addrId in classifiedItems.repeatedSingles) {
-        let byteSize = 0;
-        if(isSmallNum(classifiedItems.repeatedSingles[addrId])) {
-            byteSize += SMALL_NUM_BYTES
-        } else {
-            byteSize += MID_NUM_BYTES
-        }
-
-        if(isSmallNum(addrId)) {
-            byteSize += SMALL_NUM_BYTES
-        } else {
-            byteSize += MID_NUM_BYTES
-        }
-
+        let byteSize = getByteSize(classifiedItems.repeatedSingles[addrId], mode) + getByteSize(addrId, mode);
         stats.byteSizes.repeatedSingles += byteSize;
     }
 
     // the classifiedItems obj can have repeatedGrouped or repeatedMasks
     // repeating grouped
     for(let karma in classifiedItems.repeatedGrouped) {
-        let byteSize = 0;
         let items = classifiedItems.repeatedGrouped[karma];
-        if(isSmallNum(karma)) {
-            byteSize += SMALL_NUM_BYTES;
-        } else {
-            byteSize += MID_NUM_BYTES;
-        }
-
-        if(isSmallNum(items.length)) {
-            byteSize += SMALL_NUM_BYTES;
-        } else {
-            byteSize += MID_NUM_BYTES;
-        }
+        let byteSize = getByteSize(karma, mode);
+        byteSize += getByteSize(items.length, mode);
 
         for (let item of items) {
-            if(isSmallNum(item)) {
-                byteSize += SMALL_NUM_BYTES;
-            } else {
-                byteSize += MID_NUM_BYTES;
-            }
+            byteSize += getByteSize(item, mode);
         }
 
         stats.byteSizes.repeatedGrouped += byteSize
@@ -775,30 +741,15 @@ const calculateStats = (classifiedItems) => {
 
     // repeating masks
     for(let karma in classifiedItems.repeatedMasks) {
-        let byteSize = 0;
-
-        // karma
-        if(isSmallNum(karma)) {
-            byteSize += SMALL_NUM_BYTES
-        } else {
-            byteSize += MID_NUM_BYTES
-        }
+        let byteSize = getByteSize(karma, mode);
 
         // numGroups
-        if(isSmallNum(Object.keys(classifiedItems.repeatedMasks[karma]).length)) {
-            byteSize += SMALL_NUM_BYTES
-        } else {
-            byteSize += MID_NUM_BYTES
-        }
+        byteSize += getByteSize(Object.keys(classifiedItems.repeatedMasks[karma]).length, mode);
+
 
         for(let groupId in classifiedItems.repeatedMasks[karma]) {
             // groupId
-            if(isSmallNum(groupId)) {
-                byteSize += SMALL_NUM_BYTES
-            } else {
-                byteSize += MID_NUM_BYTES
-            }
-
+            byteSize += getByteSize(groupId, mode);
             // bitMask
             byteSize += BITMASK_BYTES
         }
@@ -807,6 +758,7 @@ const calculateStats = (classifiedItems) => {
     }
 
     for (let key in stats.byteSizes) {
+        if(key === 'total') continue;
         if(stats.byteSizes[key] > 0) {
             stats.byteSizes[key] += 1;
             stats.gasCosts[key] = GAS_COST_BYTE * stats.byteSizes[key];
@@ -819,7 +771,7 @@ const calculateStats = (classifiedItems) => {
 }
 
 
-const getNaiveGasCostStats = (fileData) => {
+const getNaiveGasCostStats = (fileData, mode='rlp') => {
 
     const stats = {
         global: {
@@ -840,11 +792,7 @@ const getNaiveGasCostStats = (fileData) => {
         let data = fileData[file];
         let byteSize = 0;
         for(let item of data) {
-            if(isSmallNum(item.karma)) {
-                byteSize += SMALL_NUM_BYTES
-            } else {
-                byteSize += MID_NUM_BYTES
-            }
+            byteSize += getByteSize(item.karma, mode);
             byteSize += ADDR_BYTES;
         }
         let distName = file.replace('.json', '')
@@ -865,7 +813,7 @@ const getNaiveGasCostStats = (fileData) => {
 };
 
 
-const getCompressedGasCostStats = (fileData) => {
+const getCompressedGasCostStats = (fileData, mode='rlp') => {
 
     const addressIndex = {};
     const stats = {
@@ -934,7 +882,7 @@ const getCompressedGasCostStats = (fileData) => {
         classifiedItems.repeatedGrouped = res.grouped;
 
 
-        let distStats = calculateStats(classifiedItems);
+        let distStats = calculateStats(classifiedItems, mode);
         let distName = file.replace('.json', '')
         stats.dists[distName] = distStats
 
@@ -948,7 +896,7 @@ const getCompressedGasCostStats = (fileData) => {
 
 };
 
-const getMasksGasCostStats = (fileData) => {
+const getCompressedBitmasksGasCostStats = (fileData, mode='rlp') => {
 
     const addressIndex = {};
     const stats = {
@@ -1021,7 +969,7 @@ const getMasksGasCostStats = (fileData) => {
             classifiedItems.repeatedMasks[karma] = getGroupsForRepeatingUsersPerKarma(karma, items);
         }
 
-        let distStats = calculateStats(classifiedItems);
+        let distStats = calculateStats(classifiedItems, mode);
         let distName = file.replace('.json', '')
         stats.dists[distName] = distStats
 
@@ -1080,7 +1028,7 @@ const compareGasCosts = (stats) => {
         for (let j = i + 1; j < statKeys.length; j++) {
             let statJ = stats[statKeys[j]];
 
-            let compKey = `${statKeys[i]}_${statKeys[j]}`
+            let compKey = `${statKeys[j]}_${statKeys[i]}`
             let gcSaving = statI.global.gasCosts.total - statJ.global.gasCosts.total;
             let gcSavingP = (gcSaving / statI.global.gasCosts.total) * 100;
             let bsSaving = statI.global.byteSizes.total - statJ.global.byteSizes.total;
@@ -1102,9 +1050,9 @@ const compareGasCosts = (stats) => {
             for (let distKey in statJ.dists) {
 
                 let gcSavingDist = statI.dists[distKey].gasCosts.total - statJ.dists[distKey].gasCosts.total;
-                let gcSavingDistP = (gcSaving / statI.dists[distKey].gasCosts.total) * 100;
+                let gcSavingDistP = (gcSavingDist / statI.dists[distKey].gasCosts.total) * 100;
                 let bsSavingDist = statI.dists[distKey].byteSizes.total - statJ.dists[distKey].byteSizes.total;
-                let bsSavingDistP = (bsSaving / statI.dists[distKey].byteSizes.total) * 100;
+                let bsSavingDistP = (bsSavingDist / statI.dists[distKey].byteSizes.total) * 100;
 
                 compObj.dists[distKey] = {
                     gasCosts: {
@@ -1158,28 +1106,28 @@ const main = () => {
     console.log("Making group stats...");
 
     let brickFileData = readFiles(dirPathBricksJson);
-
-    console.log("[BRICKS] Calculating naive gas costs...")
-    let naiveGasCosts = getNaiveGasCostStats(brickFileData)
-    writeToFile(`${dirPathBricksWrite}/stats/naiveGasCosts.json`, naiveGasCosts)
+    //
+    // console.log("[BRICKS] Calculating naive gas costs...")
+    // let naiveGasCosts = getNaiveGasCostStats(brickFileData)
+    // writeToFile(`${dirPathBricksWrite}/stats/naiveGasCosts.json`, naiveGasCosts)
 
     console.log("[BRICKS] Calculating compressed gas costs...")
     let compressedGasCosts = getCompressedGasCostStats(brickFileData)
-    writeToFile(`${dirPathBricksWrite}/stats/compressedGasCosts.json`, compressedGasCosts)
+    // writeToFile(`${dirPathBricksWrite}/stats/compressedGasCosts.json`, compressedGasCosts)
 
-    console.log("[BRICKS] Calculating masks gas costs...")
-    let compressedMasksGasCosts = getMasksGasCostStats(brickFileData)
-    writeToFile(`${dirPathBricksWrite}/stats/compressedMasksGasCosts.json`, compressedMasksGasCosts)
-
-
-    console.log("[BRICKS] Making gas cost comparisons...")
-    let costsObj = {
-        '0': naiveGasCosts,
-        '1': compressedGasCosts,
-        '2': compressedMasksGasCosts
-    }
-    let savingStats = compareGasCosts(costsObj);
-    writeToFile(`${dirPathBricksWrite}/stats/savings.json`, savingStats)
+    // console.log("[BRICKS] Calculating masks gas costs...")
+    // let compressedMasksGasCosts = getMasksGasCostStats(brickFileData)
+    // writeToFile(`${dirPathBricksWrite}/stats/compressedMasksGasCosts.json`, compressedMasksGasCosts)
+    //
+    //
+    // console.log("[BRICKS] Making gas cost comparisons...")
+    // let costsObj = {
+    //     '0': naiveGasCosts,
+    //     '1': compressedGasCosts,
+    //     '2': compressedMasksGasCosts
+    // }
+    // let savingStats = compareGasCosts(costsObj);
+    // writeToFile(`${dirPathBricksWrite}/stats/savings.json`, savingStats)
 
     // console.log("Making bricks stats...")
     // await getStats(dirPathBricksRead, dirPathBricksWrite);
@@ -1229,19 +1177,24 @@ const computeStats = (argv) => {
     let filePathRead;
     let filePathWrite;
     let dataset = argv.dataset.toUpperCase();
+    let mode = argv.rlp ? 'rlp' : 'native';
 
     switch(dataset) {
         case 'BRICKS':
             filePathRead = dirPathBricksJson
-            filePathWrite = dirPathBricksWrite
+            filePathWrite = `${dirPathBricksWriteStats}/${mode}`
             break;
         case 'MOONS':
-            fileDataPath = dirPathMoonsJson
-            filePathWrite = dirPathMoonsWrite
+            filePathRead = dirPathMoonsJson
+            filePathWrite = `${dirPathMoonsWriteStats}/${mode}`
             break;
         default:
-            fileDataPath = dirPathBricksJson
-            filePathWrite = dirPathBricksWrite
+            filePathRead = dirPathBricksJson
+            filePathWrite = dirPathBricksWriteStats
+    }
+
+    if(!fs.existsSync(filePathWrite)) {
+        fs.mkdirSync(filePathWrite, {recursive: true})
     }
 
     let fileData = readFiles(filePathRead);
@@ -1253,11 +1206,11 @@ const computeStats = (argv) => {
     if(argv.naive) {
         console.log(`[${dataset}] Calculating naive gas costs...`)
         let naiveGasCosts;
-        let naiveGasCostsPath = `${filePathWrite}/stats/naiveGasCosts.json`;
+        let naiveGasCostsPath = `${filePathWrite}/naiveGasCosts.json`;
         if(argv.cache) {
             naiveGasCosts = readFromFile(naiveGasCostsPath)
         } else {
-            naiveGasCosts = getNaiveGasCostStats(fileData)
+            naiveGasCosts = getNaiveGasCostStats(fileData, mode)
             writeToFile(naiveGasCostsPath, naiveGasCosts)
         }
 
@@ -1268,12 +1221,12 @@ const computeStats = (argv) => {
     if(argv.compressed) {
         console.log(`[${dataset}] Calculating compressed gas costs...`)
         let compressedGasCosts;
-        let compressedGasCostsPath = `${filePathWrite}/stats/compressedGasCosts.json`;
+        let compressedGasCostsPath = `${filePathWrite}/compressedGasCosts.json`;
 
         if(argv.cache) {
             compressedGasCosts = readFromFile(compressedGasCostsPath);
         } else {
-            compressedGasCosts = getCompressedGasCostStats(fileData)
+            compressedGasCosts = getCompressedGasCostStats(fileData, mode)
             writeToFile(compressedGasCostsPath, compressedGasCosts)
         }
         costsObj['compressed'] = compressedGasCosts
@@ -1282,25 +1235,25 @@ const computeStats = (argv) => {
     if(argv.compressedMasks) {
         console.log(`[${dataset}] Calculating compressed bitmasks gas costs...`)
         let compressedMasksGasCosts;
-        let compressedMasksGasCostsPath = `${filePathWrite}/stats/compressedMasksGasCosts.json`;
+        let compressedMasksGasCostsPath = `${filePathWrite}/compressedMasksGasCosts.json`;
 
         if(argv.cache) {
             compressedMasksGasCosts = readFromFile(compressedMasksGasCostsPath);
         } else {
-            compressedMasksGasCosts = getCompressedGasCostStats(fileData)
+            compressedMasksGasCosts = getCompressedBitmasksGasCostStats(fileData, mode)
             writeToFile(compressedMasksGasCostsPath, compressedMasksGasCosts)
         }
         costsObj['compressedMasks'] = compressedMasksGasCosts
     }
 
     let savingStats = compareGasCosts(costsObj);
-    writeToFile(`${filePathWrite}/stats/savings.json`, savingStats)
+    writeToFile(`${filePathWrite}/savings.json`, savingStats)
     console.log(`[${dataset}] Savings calculated and written to file`);
 }
 
 
 const argv = yargs
-    .command('computeStats', 'Tells whether an year is leap year or not', {
+    .command('compute', 'Tells whether an year is leap year or not', {
         dataset: {
             description: 'the dataset to check for',
             alias: 'd',
@@ -1333,12 +1286,18 @@ const argv = yargs
         type: 'boolean',
         default: false
     })
+    .option('rlp', {
+        alias: 'rlp',
+        description: 'should the calculations be made assuming rlp mode for the numbers',
+        type: 'boolean',
+        default: true
+    })
     .help()
     .alias('help', 'h')
     .argv;
 
 
-if (argv._.includes('computeStats')) {
+if (argv._.includes('compute')) {
     computeStats(argv);
 } else {
     main();
