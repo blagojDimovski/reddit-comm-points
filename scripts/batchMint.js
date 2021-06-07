@@ -65,7 +65,9 @@ const batchMint = async (readDirPath, writeDirPath, round) => {
         index += 1;
     }
 
-    fs.mkdirSync(`${writeDirPath}/${round}`)
+    if(!fs.existsSync(`${writeDirPath}/${round}`)) {
+        fs.mkdirSync(`${writeDirPath}/${round}`, {recursive:true})
+    }
 
     fs.writeFileSync(`${writeDirPath}/${round}/compressedDataMonths.json`, JSON.stringify(compressedData), 'utf-8');
 
@@ -89,7 +91,7 @@ const main = async () => {
     const batchType2 = 'b2'
     const readDirBricks = 'reddit-data-encoded/bricks'
     const writeDirBricks = 'batch-minting/bricks'
-    const round = 'round_3_finalized'
+    const round = 'round_1_finalized'
 
     await batchMint(readDirBricks, writeDirBricks, round)
 

@@ -1,19 +1,17 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const chalk = require("chalk");
-const { config, ethers, tenderly, run } = require("hardhat");
-const pointsJson = require("../artifacts/contracts/SubRedditPoints.sol/SubredditPoints_v0.json");
-
+const {BridgeHelper} = require('arb-ts')
+const {arbProvider} = require('./contractsLib')
 
 const main = async () => {
-    let txData = fs.readFileSync('batch-minting/bricks/txData.json', 'utf-8')
+    let txData = fs.readFileSync('batch-minting/bricks/round_1_finalized/txData.json', 'utf-8')
     txData = JSON.parse(txData);
 
-    let l2CallData = txData.l2Receipts[0].data;
-    let l1CallData = txData.l1Stats.txData[0].data;
+    let l2txHash = txData.l2Receipts[0].txHash;
+    let l2txReceipt = await  BridgeHelper.getL2Transaction(l2txHash, arbProvider)
 
-    console.log('l2 calldata length', l2CallData.length)
-    console.log('l1 calldata length', l1CallData.length)
+    console.log(l2txReceipt)
+
 
 
 

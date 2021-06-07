@@ -58,7 +58,6 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
     address _distributionContract;
 
     address[] public _registeredAccounts;
-    bytes[] public _registeredGroups;
 
     // END OF VARS
     // ------------------------------------------------------------------------------------
@@ -122,13 +121,43 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
         console.log("Byte 0 %s...", byte0);
         memPtr += 1;
         if (byte0 == 0) {
-            batchType1(memPtr,end);
+            batchType1(memPtr,end,1);
         } else if (byte0 == 1) {
-            batchType2(memPtr,end);
+            batchType1(memPtr,end,1);
         } else if (byte0 == 2) {
-            batchType3(memPtr,end);
+            batchType2(memPtr,end, 1, 1);
+        } else if (byte0 == 3) {
+            batchType2(memPtr,end, 1, 2);
+        } else if (byte0 == 4) {
+            batchType2(memPtr,end, 2, 1);
+        } else if (byte0 == 5) {
+            batchType2(memPtr,end, 2, 2);
+        } else if (byte0 == 6) {
+            batchType3(memPtr,end, 1, 1);
+        } else if (byte0 == 6) {
+            batchType3(memPtr,end, 1, 1);
+        } else if (byte0 == 7) {
+            batchType3(memPtr,end, 1, 2);
+        } else if (byte0 == 8) {
+            batchType3(memPtr,end, 2, 1);
+        } else if (byte0 == 9) {
+            batchType3(memPtr,end, 2, 2);
+        } else if (byte0 == 10) {
+            batchType4(memPtr,end, 1, 1, 1);
+        } else if (byte0 == 11) {
+            batchType4(memPtr,end, 1, 1, 2);
+        } else if (byte0 == 12) {
+            batchType4(memPtr,end, 1, 2, 1);
+        } else if (byte0 == 13) {
+            batchType4(memPtr,end, 2, 1, 1);
+        } else if (byte0 == 14) {
+            batchType4(memPtr,end, 2, 1, 2);
+        } else if (byte0 == 15) {
+            batchType4(memPtr,end, 2, 2, 1);
+        } else if (byte0 == 16) {
+            batchType4(memPtr,end, 1, 2, 2);
         } else {
-            batchType4(memPtr,end);
+            batchType4(memPtr,end, 2, 2, 2);
         }
     }
 
@@ -267,55 +296,7 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
         return _distributionContract;
     }
 
-    struct RawSlice {
-        uint256 length;
-        uint256 ptr;
-    }
-    
-    uint8 constant STRING_SHORT_START = 0x80;
-    uint8 constant STRING_LONG_START  = 0xb8;
-    uint8 constant LIST_SHORT_START   = 0xc0;
-    uint8 constant LIST_LONG_START    = 0xf8;
-    uint256 lastBatchedRecord = 0;
 
-    function parseRLP(uint memPtr) private pure returns (RawSlice memory data, uint len) {
-        uint byte0;
-        assembly {
-            byte0 := byte(0, mload(memPtr))
-        }
-
-        uint offset;
-        uint data_len;
-        if (byte0 < STRING_SHORT_START)
-            (offset, data_len) = (0,1);
-        
-        else if (byte0 < STRING_LONG_START)
-            (offset, data_len) = (1, byte0 - STRING_SHORT_START);
-
-        else if (byte0 < LIST_SHORT_START) {
-            uint byteLen = byte0 - STRING_LONG_START; // # of bytes the actual length is
-            offset = 1 + byteLen;
-                
-            /* 32 byte word size */
-            assembly {
-                data_len := div(mload(add(memPtr,1)), exp(256, sub(32, byteLen))) // right shifting to get the len
-            }
-        }
-
-        else if (byte0 < LIST_LONG_START) {
-            (offset, data_len) = (1, byte0 - LIST_SHORT_START);
-        } 
-
-        else {
-            uint byteLen = byte0 - LIST_LONG_START;
-            offset = 1 + byteLen;
-
-            assembly {
-                let dataLen := div(mload(add(memPtr,1)), exp(256, sub(32, byteLen))) // right shifting to the correct length
-            }
-        }
-        return (RawSlice(data_len,memPtr+offset), offset+data_len);
-    }
     function readUint(uint ptr, uint len) private pure returns(uint) {
         uint result;
         assembly {
@@ -327,109 +308,74 @@ contract SubredditPoints_v0 is Initializable, ISubredditPoints, Ownable, Updatab
         return result;
     }
     
-    function batchType1(uint memPtr, uint end) private {
+    function batchType1(uint memPtr, uint end, uint len) private {
         console.log("Batch type 1");
         address location;
-        uint96 amount;
-        uint len;
+        uint16 amount;
         uint read;
-        uint consumed;
-        RawSlice memory data;
-        uint nextPtr;
         while(memPtr < end) {
             read = readUint(memPtr,20);
             location = address(read);
             console.log("Address %s", location);
             memPtr += 20;
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            read = readUint(nextPtr,len);
-            amount = uint96(read);
+            read = readUint(memPtr,len);
+            amount = uint16(read);
             console.log("Amount %s", amount);
             _registeredAccounts.push(location);
             ERC20._mint(location, amount);
-            memPtr += consumed;
+            memPtr += len;
         }
     }
 
-    function batchType2(uint memPtr, uint end) private {
+    function batchType2(uint memPtr, uint end, uint newAddrLen, uint amountLen) private {
         address location;
-        uint96 amount;
-        uint len;
+        uint16 amount;
         uint read;
-        uint consumed;
-        RawSlice memory data;
-        uint nextPtr;
         uint num_addresses;
         while(memPtr < end) {
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            read = readUint(nextPtr,len);
-            amount = uint96(read);
-            memPtr += consumed;
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            num_addresses = readUint(nextPtr,len);
-            memPtr += consumed;
-            // create group byte representation and push it to _registeredGroups
-            bytes groupRepresentation;
+            read = readUint(memPtr,amountLen);
+            amount = uint16(read);
+            memPtr += amountLen;
+            num_addresses = readUint(memPtr,newAddrLen);
+            memPtr += newAddrLen;
             for(uint i = 0; i < num_addresses; i++) {
                 read = readUint(memPtr,20);
                 location = address(read);
                 memPtr += 20;
                 _registeredAccounts.push(location);
-                groupRepresentation = groupRepresentation.concat(_registeredAccounts.length - 1);
                 ERC20._mint(location, amount);
             }
         }
     }
 
-    function batchType3(uint memPtr, uint end) private {
+    function batchType3(uint memPtr, uint end, uint addrLen, uint amountLen) private {
         uint location;
-        uint96 amount;
-        uint len;
+        uint16 amount;
         uint read;
-        uint consumed;
-        RawSlice memory data;
-        uint nextPtr;
         while(memPtr < end) {
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            location = readUint(nextPtr,len);
-            memPtr += consumed;
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            read = readUint(nextPtr,len);
-            amount = uint96(read);
+            location = readUint(memPtr, addrLen);
+            memPtr += addrLen;
+            read = readUint(memPtr, amountLen);
+            amount = uint16(read);
             ERC20._mint(_registeredAccounts[location], amount);
-            memPtr += consumed;
+            memPtr += amountLen;
         }
     }
 
-    function batchType4(uint memPtr, uint end) private {
+    function batchType4(uint memPtr, uint end, uint addrLen, uint numAddrLen, uint amountLen) private {
         uint location;
-        uint96 amount;
-        uint len;
+        uint16 amount;
         uint read;
-        uint consumed;
-        RawSlice memory data;
-        uint nextPtr;
         uint num_addresses;
         while(memPtr < end) {
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            read = readUint(nextPtr,len);
-            amount = uint96(read);
-            memPtr += consumed;
-            (data, consumed) = parseRLP(memPtr);
-            (nextPtr,len) = (data.ptr, data.length);
-            num_addresses = readUint(nextPtr,len);
-            memPtr += consumed;
+            read = readUint(memPtr,amountLen);
+            amount = uint16(read);
+            memPtr += amountLen;
+            num_addresses = readUint(memPtr,numAddrLen);
+            memPtr += numAddrLen;
             for(uint i = 0; i < num_addresses; i++) {
-                (data, consumed) = parseRLP(memPtr);
-                (nextPtr,len) = (data.ptr, data.length);
-                location = readUint(nextPtr,len);
-                memPtr += consumed;
+                location = readUint(memPtr,addrLen);
+                memPtr += addrLen;
                 ERC20._mint(_registeredAccounts[location], amount);
             }
         }

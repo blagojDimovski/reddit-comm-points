@@ -1,12 +1,12 @@
 const ethers = require("ethers");
 const inboxAbi = require('../abis/Inbox.json')
+
 require("dotenv").config();
 
 const arbProvider = new ethers.providers.JsonRpcProvider(process.env.ARB_PROVIDER_URL);
 const l1Provider = new ethers.providers.JsonRpcProvider(
     process.env.ETH_PROVIDER_URL
 );
-
 
 
 const globalInbox = (async () => {
