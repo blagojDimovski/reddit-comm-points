@@ -1,42 +1,37 @@
 const fs = require("fs");
 const csv = require('csv-parser')
-const { getFileNames } = require('./utils')
+const { getFileNames, writeData } = require('./utils')
+const { dataDirs } = require('./consts')
 
-const main = async () => {
-    console.log("Converting data...");
+const convertData = async (argv) => {
+    const dataset = argv.dataset;
 
-    const dirPathBricksRead = "reddit-data-raw/bricks";
-    const dirPathBricksWrite = "reddit-data-json/bricks";
-    const indexPathBricks = "reddit-data-json/index/bricks.json";
-    const dirPathMoonsRead = "reddit-data-raw/moons";
-    const dirPathMoonsWrite = "reddit-data-json/moons";
-    const indexPathMoons = "reddit-data-json/index/moons.json";
+    console.log(`[${dataset}] Converting data...`);
 
-    console.log("Converting bricks data...")
-    await convert(dirPathBricksRead, dirPathBricksWrite, indexPathBricks);
+    const dirReadPath = `${dataDirs.raw}/${dataset}`
 
-    console.log("Converting moons data...")
-    await convert(dirPathMoonsRead, dirPathMoonsWrite, indexPathMoons);
+    let convertedData = await convert(dirReadPath);
 
-    console.log("Data converted!")
+    writeData(convertedData, dataset, 'json', '')
+
+    console.log(`[${dataset}] Data converted!`);
 };
 
 
-const convert = async (dirPathRead, dirPathWrite, indexPath) => {
+const convert = async (dirPathRead) => {
     let files = getFileNames(dirPathRead);
-    const index = {};
+    const convertedData = {}
     for (let file of files) {
 
-        let data = await getCsvData(`${dirPathRead}/${file}`, index)
+        let data = await getCsvData(`${dirPathRead}/${file}`)
+        let fName = file.split('.')[0]
 
-        let fileName = file.replace('.csv', '.json')
-        fs.writeFileSync(`${dirPathWrite}/${fileName}`, JSON.stringify(data), 'utf-8')
+        convertedData[fName] = data;
     }
-
-    fs.writeFileSync(indexPath, JSON.stringify(index), 'utf-8')
+    return convertedData;
 }
 
-const getCsvData = (file, index) => {
+const getCsvData = (file) => {
     let data = [];
     return new Promise((resolve, reject) => {
         fs.createReadStream(file)
@@ -49,9 +44,6 @@ const getCsvData = (file, index) => {
 
                 let address = row.blockchain_address;
                 let karma = row.karma;
-                if(!(address in index)) {
-                    index[address] = Object.keys(index).length
-                }
 
                 data.push({
                     address,
@@ -64,9 +56,6 @@ const getCsvData = (file, index) => {
     });
 }
 
-main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
+module.exports = {
+    convertData
+}

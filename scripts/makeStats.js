@@ -1,8 +1,6 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const {  ethers } = require("hardhat");
 const {getFileNames} = require('./utils')
-const yargs = require('yargs');
 
 
 const ADDR_BYTES = 20;
@@ -1177,7 +1175,7 @@ const computeStats = (argv) => {
     let filePathRead;
     let filePathWrite;
     let dataset = argv.dataset.toUpperCase();
-    let mode = argv.rlp ? 'rlp' : 'native';
+    let mode = argv.encType;
 
     switch(dataset) {
         case 'BRICKS':
@@ -1252,53 +1250,6 @@ const computeStats = (argv) => {
 }
 
 
-const argv = yargs
-    .command('compute', 'Tells whether an year is leap year or not', {
-        dataset: {
-            description: 'the dataset to check for',
-            alias: 'd',
-            type: 'string',
-            default: 'bricks'
-        },
-        naive: {
-            description: 'calculate naive gas costs',
-            alias: 'n',
-            type: 'boolean',
-            default: true
-        },
-        compressed: {
-            description: 'calculate compressed gas costs',
-            alias: 'cmp',
-            type: 'boolean',
-            default: true
-        },
-        compressedMasks: {
-            description: 'calculate compressed bitmask gas costs',
-            alias: 'cmpb',
-            type: 'boolean',
-            default: true
-        },
-
-    })
-    .option('cache', {
-        alias: 'c',
-        description: 'use cached results',
-        type: 'boolean',
-        default: false
-    })
-    .option('rlp', {
-        alias: 'rlp',
-        description: 'should the calculations be made assuming rlp mode for the numbers',
-        type: 'boolean',
-        default: true
-    })
-    .help()
-    .alias('help', 'h')
-    .argv;
-
-
-if (argv._.includes('compute')) {
-    computeStats(argv);
-} else {
-    main();
+module.exports = {
+    computeStats
 }

@@ -40,14 +40,15 @@
     "setup": "hardhat run scripts/setup.js",
     "batchmint": "hardhat run scripts/batchMint.js",
     "initContractLib": "hardhat run scripts/initContractsLib.js",
-    "rlpDecode": "node scripts/rlpDecode.js",
-    "rlpEncode": "node scripts/rlpEncode.js",
+    "decodeData": "node scripts/decodeData.js",
+    "encodeData": "node scripts/encodeData.js",
     "benchmarkCosts": "node scripts/benchmarkCosts.js",
     "convertData": "node scripts/convertData.js",
-    "parseData": "node scripts/parseData.js",
+    "groupData": "node scripts/groupData.js",
     "checkState": "node scripts/checkState.js",
     "decodeTx": "node scripts/decodeTx.js",
     "makeStats": "node scripts/makeStats.js",
-    "testCompression": "node scripts/testCompression.js"
+    "testCompression": "node scripts/testCompression.js",
+    "main": "node scripts/main.js"
   }
 }
