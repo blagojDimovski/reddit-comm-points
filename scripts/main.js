@@ -1,7 +1,7 @@
 const fs = require('fs');
 const {dataDirs} = require('./consts')
 const yargs = require('yargs');
-const { computeStats } = require('./makeStats')
+const { computeStats } = require('./computeStats')
 const { groupData } = require('./groupData')
 const { convertData } = require('./convertData')
 const { encodeData } = require('./encodeData')

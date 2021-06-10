@@ -1,5 +1,5 @@
 const fs = require("fs");
-const {dataDirs} = require('./consts')
+const {dataDirs, RLP_MULTI_DIGIT_BYTES, RLP_SINGLE_DIGIT_BYTES, SMALL_BYTES, MED_BYTES} = require('./consts')
 const getFileNames = (readDirPath) => {
     let files = fs.readdirSync(readDirPath);
     return files.sort((a, b) => {
@@ -29,14 +29,20 @@ const readData = (dataset = 'bricks', dType = 'json', encType='') => {
         }
     } else {
         for (let file of files) {
-            let subDir = `${readDir}/${file}`;
-            let subFiles = fs.readdirSync(subDir)
-            let sFileData = {};
-            for (let sFile of subFiles) {
-                let fSplit = sFile.split('_')
-                readDataRecursively(fSplit, subDir, sFileData, 0);
+            try {
+                let subDir = `${readDir}/${file}`;
+                let subFiles = fs.readdirSync(subDir)
+                let sFileData = {};
+                for (let sFile of subFiles) {
+                    let fSplit = sFile.split('_')
+                    readDataRecursively(fSplit, subDir, sFileData, 0);
+                }
+                data[file] = sFileData
+            } catch (e) {
+                // fallback for non directories
+                continue;
             }
-            data[file] = sFileData
+
         }
     }
     return data;
@@ -125,6 +131,15 @@ const readFromFile = (filePath) => {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
 }
 
+const getByteSize = (num, mode= "rlp") => {
+    // get byte size for num (karma) up to 2 bytes
+    num = parseInt(num)
+    if(mode === "rlp") {
+        return num < 128 ? RLP_SINGLE_DIGIT_BYTES : RLP_MULTI_DIGIT_BYTES;
+    } else {
+        return num < 256 ? SMALL_BYTES : MED_BYTES;
+    }
+}
 
 module.exports = {
     getFileNames,
@@ -132,5 +147,6 @@ module.exports = {
     writeData,
     readFromFile,
     writeToFile,
-    stringifyBigIntReplacer
+    stringifyBigIntReplacer,
+    getByteSize
 }

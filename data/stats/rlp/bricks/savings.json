@@ -1,1 +1,146 @@
-{"compressed_naive":{"global":{"gasCosts":{"saving":23249920,"savingPercent":58.08832053470421},"byteSizes":{"saving":1453120,"savingPercent":58.08832053470421}},"dists":{"round_1_finalized":{"gasCosts":{"saving":124896,"savingPercent":4.635612143094684},"byteSizes":{"saving":7806,"savingPercent":4.635612143094684}},"round_2_finalized":{"gasCosts":{"saving":1518112,"savingPercent":41.84284567688902},"byteSizes":{"saving":94882,"savingPercent":41.84284567688902}},"round_3_finalized":{"gasCosts":{"saving":1818704,"savingPercent":53.65794939577039},"byteSizes":{"saving":113669,"savingPercent":53.65794939577039}},"round_4_finalized":{"gasCosts":{"saving":2247264,"savingPercent":56.333023166270934},"byteSizes":{"saving":140454,"savingPercent":56.333023166270934}},"round_5_finalized":{"gasCosts":{"saving":2160656,"savingPercent":62.230302024866134},"byteSizes":{"saving":135041,"savingPercent":62.230302024866134}},"round_6_finalized":{"gasCosts":{"saving":1867232,"savingPercent":62.75481945527385},"byteSizes":{"saving":116702,"savingPercent":62.75481945527385}},"round_7_finalized":{"gasCosts":{"saving":1900288,"savingPercent":67.24531335813248},"byteSizes":{"saving":118768,"savingPercent":67.24531335813248}},"round_8_finalized":{"gasCosts":{"saving":2338064,"savingPercent":67.1184743567367},"byteSizes":{"saving":146129,"savingPercent":67.1184743567367}},"round_9_finalized":{"gasCosts":{"saving":1793456,"savingPercent":68.38778560751655},"byteSizes":{"saving":112091,"savingPercent":68.38778560751655}},"round_10_finalized":{"gasCosts":{"saving":1734512,"savingPercent":67.92801599087667},"byteSizes":{"saving":108407,"savingPercent":67.92801599087667}},"round_11_finalized":{"gasCosts":{"saving":1925664,"savingPercent":68.01274878784797},"byteSizes":{"saving":120354,"savingPercent":68.01274878784797}},"round_12_finalized":{"gasCosts":{"saving":2110960,"savingPercent":68.0122894833159},"byteSizes":{"saving":131935,"savingPercent":68.0122894833159}},"round_13_finalized":{"gasCosts":{"saving":1710112,"savingPercent":69.62679226354498},"byteSizes":{"saving":106882,"savingPercent":69.62679226354498}}}},"compressedMasks_naive":{"global":{"gasCosts":{"saving":14080320,"savingPercent":35.178707771519484},"byteSizes":{"saving":880020,"savingPercent":35.178707771519484}},"dists":{"round_1_finalized":{"gasCosts":{"saving":124896,"savingPercent":4.635612143094684},"byteSizes":{"saving":7806,"savingPercent":4.635612143094684}},"round_2_finalized":{"gasCosts":{"saving":999920,"savingPercent":27.560218382592893},"byteSizes":{"saving":62495,"savingPercent":27.560218382592893}},"round_3_finalized":{"gasCosts":{"saving":1217888,"savingPercent":35.93183534743202},"byteSizes":{"saving":76118,"savingPercent":35.93183534743202}},"round_4_finalized":{"gasCosts":{"saving":1457808,"savingPercent":36.54342873644356},"byteSizes":{"saving":91113,"savingPercent":36.54342873644356}},"round_5_finalized":{"gasCosts":{"saving":1360896,"savingPercent":39.19595211104045},"byteSizes":{"saving":85056,"savingPercent":39.19595211104045}},"round_6_finalized":{"gasCosts":{"saving":1133552,"savingPercent":38.09695372785202},"byteSizes":{"saving":70847,"savingPercent":38.09695372785202}},"round_7_finalized":{"gasCosts":{"saving":1144544,"savingPercent":40.501871259604},"byteSizes":{"saving":71534,"savingPercent":40.501871259604}},"round_8_finalized":{"gasCosts":{"saving":1393248,"savingPercent":39.99577435030636},"byteSizes":{"saving":87078,"savingPercent":39.99577435030636}},"round_9_finalized":{"gasCosts":{"saving":1026976,"savingPercent":39.16048930783075},"byteSizes":{"saving":64186,"savingPercent":39.16048930783075}},"round_10_finalized":{"gasCosts":{"saving":995744,"savingPercent":38.99593335463779},"byteSizes":{"saving":62234,"savingPercent":38.99593335463779}},"round_11_finalized":{"gasCosts":{"saving":1087840,"savingPercent":38.42154635563241},"byteSizes":{"saving":67990,"savingPercent":38.42154635563241}},"round_12_finalized":{"gasCosts":{"saving":1191472,"savingPercent":38.38762391294262},"byteSizes":{"saving":74467,"savingPercent":38.38762391294262}},"round_13_finalized":{"gasCosts":{"saving":945536,"savingPercent":38.49726722559883},"byteSizes":{"saving":59096,"savingPercent":38.49726722559883}}}},"compressedMasks_compressed":{"global":{"gasCosts":{"saving":-9169600,"savingPercent":-54.66164337832038},"byteSizes":{"saving":-573100,"savingPercent":-54.66164337832038}},"dists":{"round_1_finalized":{"gasCosts":{"saving":0,"savingPercent":0},"byteSizes":{"saving":0,"savingPercent":0}},"round_2_finalized":{"gasCosts":{"saving":-518192,"savingPercent":-24.55867633231217},"byteSizes":{"saving":-32387,"savingPercent":-24.55867633231217}},"round_3_finalized":{"gasCosts":{"saving":-600816,"savingPercent":-38.25060353872325},"byteSizes":{"saving":-37551,"savingPercent":-38.25060353872325}},"round_4_finalized":{"gasCosts":{"saving":-789456,"savingPercent":-45.31935999412164},"byteSizes":{"saving":-49341,"savingPercent":-45.31935999412164}},"round_5_finalized":{"gasCosts":{"saving":-799760,"savingPercent":-60.986322763265456},"byteSizes":{"saving":-49985,"savingPercent":-60.986322763265456}},"round_6_finalized":{"gasCosts":{"saving":-733680,"savingPercent":-66.20417827700214},"byteSizes":{"saving":-45855,"savingPercent":-66.20417827700214}},"round_7_finalized":{"gasCosts":{"saving":-755744,"savingPercent":-81.64768111182174},"byteSizes":{"saving":-47234,"savingPercent":-81.64768111182174}},"round_8_finalized":{"gasCosts":{"saving":-944816,"savingPercent":-82.48613613823352},"byteSizes":{"saving":-59051,"savingPercent":-82.48613613823352}},"round_9_finalized":{"gasCosts":{"saving":-766480,"savingPercent":-92.4557069517891},"byteSizes":{"saving":-47905,"savingPercent":-92.4557069517891}},"round_10_finalized":{"gasCosts":{"saving":-738768,"savingPercent":-90.20983119724913},"byteSizes":{"saving":-46173,"savingPercent":-90.20983119724913}},"round_11_finalized":{"gasCosts":{"saving":-837824,"savingPercent":-92.50936329588015},"byteSizes":{"saving":-52364,"savingPercent":-92.50936329588015}},"round_12_finalized":{"gasCosts":{"saving":-919488,"savingPercent":-92.61264745697157},"byteSizes":{"saving":-57468,"savingPercent":-92.61264745697157}},"round_13_finalized":{"gasCosts":{"saving":-764576,"savingPercent":-102.49008042895443},"byteSizes":{"saving":-47786,"savingPercent":-102.49008042895443}}}}}
+{
+  "compressed_naive": {
+    "global": {
+      "gasCosts": {
+        "saving": 23301312,
+        "savingPercent": 58.216719899902856
+      },
+      "byteSizes": {
+        "saving": 1456332,
+        "savingPercent": 58.216719899902856
+      }
+    },
+    "dists": {
+      "round_1_finalized": {
+        "gasCosts": {
+          "saving": 126992,
+          "savingPercent": 4.713406812675187
+        },
+        "byteSizes": {
+          "saving": 7937,
+          "savingPercent": 4.713406812675187
+        }
+      },
+      "round_2_finalized": {
+        "gasCosts": {
+          "saving": 1523696,
+          "savingPercent": 41.99675424902319
+        },
+        "byteSizes": {
+          "saving": 95231,
+          "savingPercent": 41.99675424902319
+        }
+      },
+      "round_3_finalized": {
+        "gasCosts": {
+          "saving": 1823808,
+          "savingPercent": 53.808534743202415
+        },
+        "byteSizes": {
+          "saving": 113988,
+          "savingPercent": 53.808534743202415
+        }
+      },
+      "round_4_finalized": {
+        "gasCosts": {
+          "saving": 2252416,
+          "savingPercent": 56.462170313803504
+        },
+        "byteSizes": {
+          "saving": 140776,
+          "savingPercent": 56.462170313803504
+        }
+      },
+      "round_5_finalized": {
+        "gasCosts": {
+          "saving": 2165232,
+          "savingPercent": 62.3620980451793
+        },
+        "byteSizes": {
+          "saving": 135327,
+          "savingPercent": 62.3620980451793
+        }
+      },
+      "round_6_finalized": {
+        "gasCosts": {
+          "saving": 1871232,
+          "savingPercent": 62.88925335412577
+        },
+        "byteSizes": {
+          "saving": 116952,
+          "savingPercent": 62.88925335412577
+        }
+      },
+      "round_7_finalized": {
+        "gasCosts": {
+          "saving": 1904064,
+          "savingPercent": 67.37893431624005
+        },
+        "byteSizes": {
+          "saving": 119004,
+          "savingPercent": 67.37893431624005
+        }
+      },
+      "round_8_finalized": {
+        "gasCosts": {
+          "saving": 2342080,
+          "savingPercent": 67.2337611038132
+        },
+        "byteSizes": {
+          "saving": 146380,
+          "savingPercent": 67.2337611038132
+        }
+      },
+      "round_9_finalized": {
+        "gasCosts": {
+          "saving": 1796960,
+          "savingPercent": 68.52139959122663
+        },
+        "byteSizes": {
+          "saving": 112310,
+          "savingPercent": 68.52139959122663
+        }
+      },
+      "round_10_finalized": {
+        "gasCosts": {
+          "saving": 1737872,
+          "savingPercent": 68.05960235852899
+        },
+        "byteSizes": {
+          "saving": 108617,
+          "savingPercent": 68.05960235852899
+        }
+      },
+      "round_11_finalized": {
+        "gasCosts": {
+          "saving": 1929216,
+          "savingPercent": 68.13820228528803
+        },
+        "byteSizes": {
+          "saving": 120576,
+          "savingPercent": 68.13820228528803
+        }
+      },
+      "round_12_finalized": {
+        "gasCosts": {
+          "saving": 2114560,
+          "savingPercent": 68.12827663709425
+        },
+        "byteSizes": {
+          "saving": 132160,
+          "savingPercent": 68.12827663709425
+        }
+      },
+      "round_13_finalized": {
+        "gasCosts": {
+          "saving": 1713184,
+          "savingPercent": 69.75186799299054
+        },
+        "byteSizes": {
+          "saving": 107074,
+          "savingPercent": 69.75186799299054
+        }
+      }
+    }
+  }
+}

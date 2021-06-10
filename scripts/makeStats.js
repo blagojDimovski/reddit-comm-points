@@ -655,7 +655,7 @@ const getByteSize = (num, mode= "rlp") => {
     if(mode === "rlp") {
         return num < 128 ? RLP_SINGLE_DIGIT_BYTES : RLP_MULTI_DIGIT_BYTES;
     } else {
-        return num < 256 ? 1 : 2;
+        return num < 256 ? SMALL_BYTES : MED_BYTES;
     }
 }
 
@@ -755,7 +755,7 @@ const calculateStats = (classifiedItems, mode="rlp") => {
 }
 
 
-const getNaiveGasCostStats = (fileData, mode='rlp') => {
+const getNaiveGasCostStats = (fileData, encType='rlp') => {
 
     const stats = {
         global: {
@@ -772,15 +772,14 @@ const getNaiveGasCostStats = (fileData, mode='rlp') => {
 
     }
 
-    for (let file in fileData) {
-        let data = fileData[file];
+    for (let fName in fileData) {
+        let data = fileData[fName];
         let byteSize = 0;
         for(let item of data) {
-            byteSize += getByteSize(item.karma, mode);
+            byteSize += getByteSize(item.karma, encType);
             byteSize += ADDR_BYTES;
         }
-        let distName = file.replace('.json', '')
-        stats.dists[distName] = {
+        stats.dists[fName] = {
             gasCosts: {
                 total: byteSize * GAS_COST_BYTE
             },
@@ -789,15 +788,15 @@ const getNaiveGasCostStats = (fileData, mode='rlp') => {
             }
         }
 
-        stats.global.byteSizes.total += stats.dists[distName].byteSizes.total
-        stats.global.gasCosts.total += stats.dists[distName].gasCosts.total
+        stats.global.byteSizes.total += stats.dists[fName].byteSizes.total
+        stats.global.gasCosts.total += stats.dists[fName].gasCosts.total
     }
 
     return stats;
 };
 
 
-const getCompressedGasCostStats = (fileData, mode='rlp') => {
+const getCompressedGasCostStats = (fileData, encType='rlp') => {
 
     const addressIndex = {};
     const stats = {
@@ -866,7 +865,7 @@ const getCompressedGasCostStats = (fileData, mode='rlp') => {
         classifiedItems.repeatedGrouped = res.grouped;
 
 
-        let distStats = calculateStats(classifiedItems, mode);
+        let distStats = calculateStats(classifiedItems, encType);
         let distName = file.replace('.json', '')
         stats.dists[distName] = distStats
 

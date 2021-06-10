@@ -19,8 +19,92 @@ const dataDirs = {
     addrIndex: 'data/addrIndex'
 }
 
+const statsTemplateRlp = {
+    gasCosts: {
+        newSingles: 0,
+        newGrouped: 0,
+        repeatingSingles: 0,
+        repeatingGrouped: 0,
+        total: 0
+    },
+    byteSizes: {
+        newSingles: 0,
+        newGrouped: 0,
+        repeatingSingles: 0,
+        repeatingGrouped: 0,
+        total: 0
+    }
+}
+
+const nativeTemplate = {
+    newSingles: {
+        amountSmall: {},
+        amountMed: {}
+    },
+    newGrouped: {
+        amountSmall: {
+            numAddrSmall: {},
+            numAddrMed: {},
+        },
+        amountMed: {
+            numAddrSmall: {},
+            numAddrMed: {}
+        }
+    },
+    repeatingSingles: {
+        amountSmall: {
+            addrSmall: {},
+            addrMed: {},
+        },
+        amountMed: {
+            addrSmall: {},
+            addrMed: {},
+        }
+    },
+    repeatingGrouped: {
+        amountSmall: {
+            numAddrSmall: {
+                addrSmall: {},
+                addrMed: {}
+            },
+            numAddrMed: {
+                addrSmall: {},
+                addrMed: {}
+            }
+        },
+        amountMed: {
+            numAddrSmall: {
+                addrSmall: {},
+                addrMed: {}
+            },
+            numAddrMed: {
+                addrSmall: {},
+                addrMed: {}
+            }
+        }
+    }
+}
+
+
+
+
+const getStatsTemplateRlp = () => {
+    return JSON.parse(JSON.stringify(statsTemplateRlp))
+}
+
+const getStatsTemplateNative = () => {
+
+    return {
+        gasCosts: JSON.parse(JSON.stringify({...nativeTemplate, total: 0})),
+        byteSizes: JSON.parse(JSON.stringify({...nativeTemplate, total: 0})),
+    };
+
+}
+
 module.exports = {
     dataDirs,
+    getStatsTemplateRlp,
+    getStatsTemplateNative,
     ADDR_BYTES,
     RLP_SINGLE_DIGIT_BYTES,
     RLP_MULTI_DIGIT_BYTES,
