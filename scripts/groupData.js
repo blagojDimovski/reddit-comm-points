@@ -161,33 +161,70 @@ const splitGroupedDataBySize = (dataNew, dataRepeating) => {
 
     for (let karma in dataRepeating.groups) {
         let addrs = dataRepeating.groups[karma];
-        let addrsLen = addrs.length;
         let karmaSm = isSmallNum(karma);
-        let addrsLenSm = isSmallNum(addrsLen);
-        let addrSm = true;
+        let addrsSm = [];
+        let addrsMd = []
         for (let addr of addrs) {
-            if(!isSmallNum(addr)) {
-                addrSm = false;
-                break
+            if(isSmallNum(addr)) {
+                addrsSm.push(addr);
+            } else {
+                addrsMd.push(addr);
             }
         }
 
-        if (karmaSm && addrsLenSm && addrSm) {
-            splitData.repeatingGrouped.amountSmall.numAddrSmall.addrSmall[karma] = addrs;
-        } else if (karmaSm && addrsLenSm && !addrSm) {
-            splitData.repeatingGrouped.amountSmall.numAddrSmall.addrMed[karma] = addrs;
-        } else if (karmaSm && !addrsLenSm && addrSm) {
-            splitData.repeatingGrouped.amountSmall.numAddrMed.addrSmall[karma] = addrs;
-        } else if (karmaSm && !addrsLenSm && !addrSm) {
-            splitData.repeatingGrouped.amountSmall.numAddrMed.addrMed[karma] = addrs;
-        } else if (!karmaSm && addrsLenSm && addrSm) {
-            splitData.repeatingGrouped.amountMed.numAddrSmall.addrSmall[karma] = addrs;
-        } else if (!karmaSm && addrsLenSm && !addrSm) {
-            splitData.repeatingGrouped.amountMed.numAddrSmall.addrMed[karma] = addrs;
-        } else if (!karmaSm && !addrsLenSm && addrSm){
-            splitData.repeatingGrouped.amountMed.numAddrMed.addrSmall[karma] = addrs;
+
+
+        if(addrsSm.length === 1) {
+            // it is cheaper to classify this entity as repeated single rather than group
+            let addrId = addrsSm.pop();
+            if(karmaSm) {
+                splitData.repeatingSingles.amountSmall.addrSmall[addrId] = karma;
+            } else  {
+                splitData.repeatingSingles.amountMed.addrSmall[addrId] = karma;
+            }
+        }
+
+        if(addrsMd.length === 1) {
+            // it is cheaper to classify this entity as repeated single rather than group
+            let addrId = addrsMd.pop();
+            if(karmaSm) {
+                splitData.repeatingSingles.amountSmall.addrMed[addrId] = karma;
+            } else  {
+                splitData.repeatingSingles.amountMed.addrMed[addrId] = karma;
+            }
+        }
+
+        let addrsSmLenSm = isSmallNum(addrsSm.length);
+        let addrsMdLenSm = isSmallNum(addrsMd.length);
+
+        if (karmaSm) {
+
+            if(addrsSm.length && addrsSmLenSm) {
+                splitData.repeatingGrouped.amountSmall.numAddrSmall.addrSmall[karma] = addrsSm;
+            } else if (addrsSm.length && !addrsSmLenSm) {
+                splitData.repeatingGrouped.amountSmall.numAddrMed.addrSmall[karma] = addrsSm;
+            }
+
+            if (addrsMd.length && addrsMdLenSm) {
+                splitData.repeatingGrouped.amountSmall.numAddrSmall.addrMed[karma] = addrsMd;
+            } else if (addrsMd.length && !addrsMdLenSm) {
+                splitData.repeatingGrouped.amountSmall.numAddrMed.addrMed[karma] = addrsMd;
+            }
+
         } else {
-            splitData.repeatingGrouped.amountMed.numAddrMed.addrMed[karma] = addrs;
+
+            if(addrsSm.length && addrsSmLenSm) {
+                splitData.repeatingGrouped.amountMed.numAddrSmall.addrSmall[karma] = addrsSm;
+            } else if(addrsSm.length && !addrsSmLenSm) {
+                splitData.repeatingGrouped.amountMed.numAddrMed.addrSmall[karma] = addrsSm;
+            }
+
+            if (addrsMd.length && addrsMdLenSm) {
+                splitData.repeatingGrouped.amountMed.numAddrSmall.addrMed[karma] = addrsMd;
+            } else if (addrsMd.length && !addrsMdLenSm) {
+                splitData.repeatingGrouped.amountMed.numAddrMed.addrMed[karma] = addrsMd;
+            }
+
         }
 
 
@@ -210,10 +247,10 @@ const group = (data, encType='rlp') => {
 
         if(encType === 'rlp') {
             groupedData[fName] = {
-                newSingles: groupedNew.singles,
                 newGrouped: groupedNew.groups,
-                repeatingSingles: groupedRepeating.singles,
-                repeatingGrouped: groupedRepeating.groups
+                newSingles: groupedNew.singles,
+                repeatingGrouped: groupedRepeating.groups,
+                repeatingSingles: groupedRepeating.singles
             }
         } else {
             groupedData[fName] = splitGroupedDataBySize(groupedNew, groupedRepeating)

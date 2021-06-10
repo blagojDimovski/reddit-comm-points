@@ -19,12 +19,13 @@ const nativeDecodeNewSingles = (input, amountLen = 1) => {
 
     while(input.length > 2) {
         let addr = ethers.utils.hexDataSlice(input, pointer, pointer + ADDR_BYTES);
+        addr = ethers.utils.getAddress(addr);
         pointer += ADDR_BYTES;
 
         if(!isInputValid(input)) break;
 
         let amount = ethers.utils.hexDataSlice(input, pointer, pointer + amountLen);
-        amount = ethers.BigNumber.from(amount).toNumber()
+        amount = ethers.BigNumber.from(amount).toString()
         addresses[addr] = amount
         pointer += amountLen;
         input = ethers.utils.hexDataSlice(input, pointer);
@@ -55,6 +56,7 @@ const nativeDecodeNewGrouped = (input, amountLen= 1, numAddrLen = 1) => {
 
         for(let i = 0; i < numAddresses; i++) {
             let addr = ethers.utils.hexDataSlice(input, pointer,  pointer + ADDR_BYTES);
+            addr = ethers.utils.getAddress(addr);
             groups[amount].push(addr);
             pointer += ADDR_BYTES;
         }
@@ -80,7 +82,7 @@ const nativeDecodeRepeatingSingles = (input, amountLen= 1, idLen= 1) => {
         id = ethers.BigNumber.from(id).toString();
         pointer += idLen;
         let amount = ethers.utils.hexDataSlice(input, pointer, pointer + amountLen )
-        amount = ethers.BigNumber.from(amount).toNumber()
+        amount = ethers.BigNumber.from(amount).toString()
         pointer += amountLen;
 
         input = ethers.utils.hexDataSlice(input, pointer)
@@ -113,7 +115,7 @@ const nativeDecodeRepeatingGrouped = (input, amountLen= 1, numAddrLen = 1, idLen
 
         for(let i = 0; i < numAddresses; i++) {
             let id = ethers.utils.hexDataSlice(input, pointer,  pointer + idLen)
-            id = ethers.BigNumber.from(id).toString();
+            id = ethers.BigNumber.from(id).toNumber();
             groups[amount].push(id);
             pointer += idLen;
         }
@@ -131,15 +133,13 @@ const rlpDecodeNewSingles = (input) => {
     addresses = {
     };
 
-    while(input.length) {
+    while(input.length > 2) {
         let addr = ethers.utils.hexDataSlice(input, pointer, pointer + ADDR_BYTES);
+        addr = ethers.utils.getAddress(addr);
         pointer += ADDR_BYTES;
         let remainder = ethers.utils.hexDataSlice(input, pointer);
-        if(remainder === '0x') {
-            break;
-        }
         let decoded = rlp.decode(remainder, true);
-        let amount = ethers.BigNumber.from(decoded.data).toNumber()
+        let amount = ethers.BigNumber.from(decoded.data).toString()
         input = ethers.utils.hexlify(decoded.remainder)
         pointer = 0;
         addresses[addr] = amount
@@ -166,6 +166,7 @@ const rlpDecodeNewGrouped = (input) => {
 
         for(let i = 0; i < numAddresses; i++) {
             let addr = ethers.utils.hexDataSlice(input, 0,  ADDR_BYTES);
+            addr = ethers.utils.getAddress(addr);
             groups[amount].push(addr);
             input = ethers.utils.hexDataSlice(input, ADDR_BYTES)
         }
@@ -187,7 +188,7 @@ const rlpDecodeRepeatingSingles = (input) => {
         let id = ethers.BigNumber.from(decoded.data).toString();
 
         decoded = rlp.decode(decoded.remainder, true);
-        let amount = ethers.BigNumber.from(decoded.data).toNumber()
+        let amount = ethers.BigNumber.from(decoded.data).toString()
         input = ethers.utils.hexlify(decoded.remainder)
         ids[id] = amount
     }
@@ -215,7 +216,7 @@ const rlpDecodeRepeatingGrouped = (input) => {
 
         for(let i = 0; i < numAddresses; i++) {
             input = rlp.decode(input, true)
-            let id = ethers.BigNumber.from(input.data).toString();
+            let id = ethers.BigNumber.from(input.data).toNumber();
             groups[amount].push(id);
             input = input.remainder;
         }
@@ -333,15 +334,14 @@ const decodeNative = (data) => {
 
 
 const decodeData = (argv) => {
-    console.log("Decoding data...");
 
     const dataset = argv.dataset;
     const encType = argv.encType;
 
     console.log(`[${dataset}] Decoding data, enc type: [${encType}]...`);
 
-    const groupedData = readData(dataset, 'encoded', encType);
-    let decodedData = encType === 'rlp' ? decodeRlp(groupedData) : decodeNative(groupedData);
+    const encodedData = readData(dataset, 'encoded', encType);
+    let decodedData = encType === 'rlp' ? decodeRlp(encodedData) : decodeNative(encodedData);
 
     writeData(decodedData, dataset, 'decoded', encType);
 

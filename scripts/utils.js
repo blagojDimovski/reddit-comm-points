@@ -111,8 +111,26 @@ const writeFilesRecursively = (fData, basePath, path='') => {
 
 }
 
+const stringifyBigIntReplacer = (key, value) => {
+    return typeof value === 'bigint' ? value.toString(2) : value;
+};
+
+const writeToFile = (filePath, obj) => {
+
+    fs.writeFileSync(filePath, JSON.stringify(obj, stringifyBigIntReplacer))
+
+}
+
+const readFromFile = (filePath) => {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+}
+
+
 module.exports = {
     getFileNames,
     readData,
-    writeData
+    writeData,
+    readFromFile,
+    writeToFile,
+    stringifyBigIntReplacer
 }

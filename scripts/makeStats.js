@@ -1,30 +1,16 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const {getFileNames} = require('./utils')
-
-
-const ADDR_BYTES = 20;
-const RLP_SINGLE_DIGIT_BYTES = 1;
-const RLP_MULTI_DIGIT_BYTES = 3;
-const BATCH_TYPE_BYTES = 1;
-const BITMASK_BYTES = 13;
-const GAS_COST_BYTE = 16;
-
-
-const stringifyBigIntReplacer = (key, value) => {
-    return typeof value === 'bigint' ? value.toString(2) : value;
-};
-
-const dirPathBricksRead = "reddit-data-parsed/bricks";
-const dirPathBricksJson = 'reddit-data-json/bricks'
-const dirPathBricksWrite = "reddit-data-stats/bricks";
-const dirPathBricksWriteStats = "reddit-data-stats/bricks/stats";
-
-const dirPathMoonsRead = "reddit-data-parsed/moons";
-const dirPathMoonsJson = 'reddit-data-json/moons'
-const dirPathMoonsWrite = "reddit-data-stats/moons";
-const dirPathMoonsWriteStats = "reddit-data-stats/moons/stats";
-
+const {getFileNames, stringifyBigIntReplacer, readFromFile, readData, writeToFile} = require('./utils')
+const { dataDirs,
+    RLP_MULTI_DIGIT_BYTES,
+    RLP_SINGLE_DIGIT_BYTES,
+    ADDR_BYTES,
+    SMALL_BYTES,
+    MED_BYTES,
+    BITMASK_BYTES,
+    GAS_COST_BYTE,
+    BATCH_TYPE_BYTES
+} = require('./consts')
 
 const getMaxGroupFromBatch = (batch) => {
 
@@ -1090,15 +1076,6 @@ const readFiles = (dirPathRead) => {
     return fileData;
 }
 
-const writeToFile = (filePath, obj) => {
-
-    fs.writeFileSync(filePath, JSON.stringify(obj, stringifyBigIntReplacer))
-
-}
-
-const readFromFile = (filePath) => {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-}
 
 const main = () => {
     console.log("Making group stats...");
@@ -1172,43 +1149,28 @@ const main = () => {
 
 const computeStats = (argv) => {
 
-    let filePathRead;
-    let filePathWrite;
-    let dataset = argv.dataset.toUpperCase();
-    let mode = argv.encType;
+    let dataset = argv.dataset;
+    let encType = argv.encType;
 
-    switch(dataset) {
-        case 'BRICKS':
-            filePathRead = dirPathBricksJson
-            filePathWrite = `${dirPathBricksWriteStats}/${mode}`
-            break;
-        case 'MOONS':
-            filePathRead = dirPathMoonsJson
-            filePathWrite = `${dirPathMoonsWriteStats}/${mode}`
-            break;
-        default:
-            filePathRead = dirPathBricksJson
-            filePathWrite = dirPathBricksWriteStats
+    const data = readData(dataset, 'json');
+
+    let statsDir = `${dataDirs.stats}/${encType}/${dataset}`
+    if(!fs.existsSync(statsDir)) {
+        fs.mkdirSync(statsDir, {recursive: true});
     }
-
-    if(!fs.existsSync(filePathWrite)) {
-        fs.mkdirSync(filePathWrite, {recursive: true})
-    }
-
-    let fileData = readFiles(filePathRead);
 
     let costsObj = {
 
     }
 
     if(argv.naive) {
-        console.log(`[${dataset}] Calculating naive gas costs...`)
+        console.log(`[${dataset}] Calculating naive gas costs, enc type: [${encType}]...`)
         let naiveGasCosts;
-        let naiveGasCostsPath = `${filePathWrite}/naiveGasCosts.json`;
+        let naiveGasCostsPath = `${statsDir}/naiveGasCosts.json`;
         if(argv.cache) {
             naiveGasCosts = readFromFile(naiveGasCostsPath)
         } else {
-            naiveGasCosts = getNaiveGasCostStats(fileData, mode)
+            naiveGasCosts = getNaiveGasCostStats(data, encType)
             writeToFile(naiveGasCostsPath, naiveGasCosts)
         }
 
@@ -1217,36 +1179,36 @@ const computeStats = (argv) => {
     }
 
     if(argv.compressed) {
-        console.log(`[${dataset}] Calculating compressed gas costs...`)
+        console.log(`[${dataset}] Calculating compressed gas costs, enc type: [${encType}]...`)
         let compressedGasCosts;
-        let compressedGasCostsPath = `${filePathWrite}/compressedGasCosts.json`;
+        let compressedGasCostsPath = `${statsDir}/compressedGasCosts.json`;
 
         if(argv.cache) {
             compressedGasCosts = readFromFile(compressedGasCostsPath);
         } else {
-            compressedGasCosts = getCompressedGasCostStats(fileData, mode)
+            compressedGasCosts = getCompressedGasCostStats(data, encType)
             writeToFile(compressedGasCostsPath, compressedGasCosts)
         }
         costsObj['compressed'] = compressedGasCosts
     }
 
     if(argv.compressedMasks) {
-        console.log(`[${dataset}] Calculating compressed bitmasks gas costs...`)
+        console.log(`[${dataset}] Calculating compressed bitmasks gas costs, enc type: [${encType}]...`)
         let compressedMasksGasCosts;
-        let compressedMasksGasCostsPath = `${filePathWrite}/compressedMasksGasCosts.json`;
+        let compressedMasksGasCostsPath = `${statsDir}/compressedMasksGasCosts.json`;
 
         if(argv.cache) {
             compressedMasksGasCosts = readFromFile(compressedMasksGasCostsPath);
         } else {
-            compressedMasksGasCosts = getCompressedBitmasksGasCostStats(fileData, mode)
+            compressedMasksGasCosts = getCompressedBitmasksGasCostStats(data, encType)
             writeToFile(compressedMasksGasCostsPath, compressedMasksGasCosts)
         }
         costsObj['compressedMasks'] = compressedMasksGasCosts
     }
 
     let savingStats = compareGasCosts(costsObj);
-    writeToFile(`${filePathWrite}/savings.json`, savingStats)
-    console.log(`[${dataset}] Savings calculated and written to file`);
+    writeToFile(`${statsDir}/savings.json`, savingStats)
+    console.log(`[${dataset}] Savings calculated and written to file, enc type: [${encType}]`);
 }
 
 
