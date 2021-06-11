@@ -2,6 +2,7 @@ const fs = require('fs');
 const {dataDirs} = require('./consts')
 const yargs = require('yargs');
 const { computeStats } = require('./computeStats')
+const { generalStats } = require('./generalStats')
 const { groupData } = require('./groupData')
 const { convertData } = require('./convertData')
 const { encodeData } = require('./encodeData')
@@ -61,6 +62,7 @@ const argv = yargs
     .command('encode', 'Encode the data')
     .command('decode', 'Decode the data')
     .command('verify', 'Verify if the data is properly encoded')
+    .command('stats', 'Make general stats for dataset and encType')
     .command('batchMint', 'Batch mint subreddit points', {
         round: {
             description: 'the round to be batch minted',
@@ -100,6 +102,8 @@ if (argv._.includes('convert')) {
     decodeData(argv)
 } else if (argv._.includes('verify')) {
     verifyData(argv)
+} else if (argv._.includes('stats')) {
+    generalStats(argv)
 } else {
 
     if(fs.existsSync(dataDirs.json)) {

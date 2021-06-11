@@ -48,6 +48,7 @@
     "checkState": "node scripts/checkState.js",
     "decodeTx": "node scripts/decodeTx.js",
     "makeStats": "node scripts/makeStats.js",
+    "stats": "node scripts/generalStats.js",
     "testCompression": "node scripts/testCompression.js",
     "main": "node scripts/main.js"
   }

@@ -141,7 +141,16 @@ const getByteSize = (num, mode= "rlp") => {
     }
 }
 
+const getByteSizeForGroup = (karma, items, encType) => {
+    let byteSizes = items.map(num => getByteSize(num, encType));
+    let itemsTotalByteSize = byteSizes.length ? byteSizes.reduce((acc, curr) => acc + curr) : byteSizes.length;
+    return getByteSize(karma, encType) + getByteSize(items.length, encType) + itemsTotalByteSize;
+
+}
+
+
 module.exports = {
+    getByteSizeForGroup,
     getFileNames,
     readData,
     writeData,

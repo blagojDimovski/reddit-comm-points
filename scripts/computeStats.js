@@ -250,7 +250,7 @@ const computeStats = (argv) => {
     const jsonData = readData(dataset, 'json');
     const encodedData = readData(dataset, 'encoded', encType);
 
-    let statsDir = `${dataDirs.stats}/${encType}/${dataset}`
+    let statsDir = `${dataDirs.sizeStats}/${encType}/${dataset}`
     if(!fs.existsSync(statsDir)) {
         fs.mkdirSync(statsDir, {recursive: true});
     }

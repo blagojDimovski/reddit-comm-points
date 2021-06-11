@@ -14,7 +14,8 @@ const dataDirs = {
     encoded: 'data/encoded',
     decoded: 'data/decoded',
     grouped: 'data/grouped',
-    stats: 'data/stats',
+    sizeStats: 'data/stats/size',
+    generalStats: 'data/stats/general',
     json: 'data/json',
     addrIndex: 'data/addrIndex'
 }
