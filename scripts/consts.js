@@ -38,62 +38,23 @@ const statsTemplateRlp = {
 }
 
 const nativeTemplate = {
-    newSingles: {
-        amountSmall: {},
-        amountMed: {}
-    },
-    newGrouped: {
-        amountSmall: {
-            numAddrSmall: {},
-            numAddrMed: {},
-        },
-        amountMed: {
-            numAddrSmall: {},
-            numAddrMed: {}
-        }
-    },
-    repeatingSingles: {
-        amountSmall: {
-            addrSmall: {},
-            addrMed: {},
-        },
-        amountMed: {
-            addrSmall: {},
-            addrMed: {},
-        }
-    },
-    repeatingGrouped: {
-        amountSmall: {
-            numAddrSmall: {
-                addrSmall: {},
-                addrMed: {}
-            },
-            numAddrMed: {
-                addrSmall: {},
-                addrMed: {}
-            }
-        },
-        amountMed: {
-            numAddrSmall: {
-                addrSmall: {},
-                addrMed: {}
-            },
-            numAddrMed: {
-                addrSmall: {},
-                addrMed: {}
-            }
-        }
-    }
+    newSingles: {},
+    newGrouped: {},
+    repeatingSingles: {},
+    repeatingGrouped: {}
 }
 
+const getNativeTemplateWithBitmaps = () => {
 
+    return JSON.parse(JSON.stringify({...nativeTemplate, repeatingGroupedBitmaps: {}}))
+}
 
 
 const getStatsTemplateRlp = () => {
     return JSON.parse(JSON.stringify(statsTemplateRlp))
 }
 
-const getStatsTemplateNative = () => {
+const getStatsTemplateNativeWithCosts = () => {
 
     return {
         gasCosts: JSON.parse(JSON.stringify({...nativeTemplate, total: 0})),
@@ -102,10 +63,17 @@ const getStatsTemplateNative = () => {
 
 }
 
+const getNativeTemplate = () => {
+    return JSON.parse(JSON.stringify(nativeTemplate))
+}
+
+
 module.exports = {
     dataDirs,
     getStatsTemplateRlp,
-    getStatsTemplateNative,
+    getNativeTemplate,
+    getNativeTemplateWithBitmaps,
+    getStatsTemplateNativeWithCosts,
     ADDR_BYTES,
     RLP_SINGLE_DIGIT_BYTES,
     RLP_MULTI_DIGIT_BYTES,

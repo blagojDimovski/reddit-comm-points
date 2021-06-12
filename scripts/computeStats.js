@@ -1,5 +1,5 @@
 const fs = require('fs');
-const {dataDirs, getStatsTemplateRlp, getStatsTemplateNative,
+const {dataDirs, getStatsTemplateRlp, getStatsTemplateNativeWithCosts,
     ADDR_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE} = require('./consts')
 const {getByteSize, readData, readFromFile, writeToFile} = require('./utils')
 
@@ -54,7 +54,7 @@ const calculateStatsRecursive = (data, byteSizes, gasCosts) => {
             totalByteSize += byteSizes[key]
             totalGasCost += gasCosts[key]
         } else if(data[key] instanceof Object) {
-            let res = calculateStatsRecursive(data[key], byteSizes[key], gasCosts[key], totalByteSize, totalGasCost)
+            let res = calculateStatsRecursive(data[key], byteSizes[key], gasCosts[key])
             totalGasCost += res.totalGasCost;
             totalByteSize += res.totalByteSize;
         }
@@ -63,6 +63,8 @@ const calculateStatsRecursive = (data, byteSizes, gasCosts) => {
     return {totalGasCost, totalByteSize}
 
 }
+
+
 
 const updateGlobalRecursive = (distStats, globalStats) => {
 
@@ -83,14 +85,14 @@ const updateGlobalRecursive = (distStats, globalStats) => {
 const getStatsCompressedNative = (data) => {
 
     const stats = {
-        global: getStatsTemplateNative(),
+        global: getStatsTemplateNativeWithCosts(),
         dists: {}
     }
 
     for(let fName in data) {
         let fData = data[fName];
 
-        let distStats = getStatsTemplateNative();
+        let distStats = getStatsTemplateNativeWithCosts();
 
 
         let res = calculateStatsRecursive(fData, distStats.byteSizes, distStats.gasCosts);
@@ -106,7 +108,11 @@ const getStatsCompressedNative = (data) => {
 
     return stats;
 
-};const compareGasCosts = (stats) => {
+};
+
+
+
+const compareGasCosts = (stats) => {
     /***
      * gasCosts has the following structure: {
      *     'naive': {

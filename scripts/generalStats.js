@@ -1,5 +1,5 @@
 const fs = require('fs')
-const {readData, getByteSizeForGroup} = require('./utils')
+const {readData, getByteSizeForRepeatingGroup, getBitmapStats} = require('./utils')
 const {dataDirs, GAS_COST_BYTE} = require('./consts')
 
 const getLargestRepeatingGroupRlp = (data) => {
@@ -29,7 +29,7 @@ const getLargestRepeatingGroupRlp = (data) => {
 
     }
 
-    largestGroup.byteSize = getByteSizeForGroup(largestGroup.karma, largestGroup.items, 'rlp');
+    largestGroup.byteSize = getByteSizeForRepeatingGroup(largestGroup.karma, largestGroup.items, 'rlp');
     largestGroup.gasCost = largestGroup.byteSize * GAS_COST_BYTE
 
     return largestGroup;
@@ -99,7 +99,7 @@ const getLargestRepeatingGroupNative = (data) => {
 
 
     }
-    largestGroup.byteSize = getByteSizeForGroup(largestGroup.karma, largestGroup.items, 'native');
+    largestGroup.byteSize = getByteSizeForRepeatingGroup(largestGroup.karma, largestGroup.items, 'native');
     largestGroup.gasCost = largestGroup.byteSize * GAS_COST_BYTE
 
     return largestGroup;
@@ -125,48 +125,6 @@ const makeAddressIndex = (data) => {
 }
 
 
-const bitmapStats = (group) => {
-
-    let items = group.items.slice();
-    items.sort((a, b) => {
-        return a - b;
-    })
-
-    let startIndex = items[0]
-    let endIndex = items[items.length - 1];
-    let bitmapRange = endIndex - startIndex;
-    let projectedItems = items.map(item => item - startIndex)
-    let bitmap = BigInt(0)
-
-
-
-
-    for (let item of projectedItems) {
-        bitmap = bitmap | (BigInt(1) << BigInt(item));
-    }
-    //
-    // // pad bitmap with ones
-    let bitsRemaining = 8 - (bitmapRange % 8)
-    // bitmap = bitmap | (BigInt(1) << BigInt(bitsRemaining));
-
-
-    let bitmapStr = bitmap.toString(2);
-    let bitmapBits = bitsRemaining + bitmapRange;
-    let bitmapBytes = bitmapBits / 8;
-
-    return {
-        startIndex,
-        endIndex,
-        bitmapBits,
-        bitmapBytes,
-        bitmapRange,
-        items,
-        projectedItems,
-        bitmapStr,
-        group
-    }
-
-}
 
 const generalStats = (argv) => {
 
@@ -185,7 +143,7 @@ const generalStats = (argv) => {
     const largestGroup = encType === 'rlp' ? getLargestRepeatingGroupRlp(groupedData) : getLargestRepeatingGroupNative(groupedData);
     fs.writeFileSync(`${statsDir}/largestGroupStats.json`, JSON.stringify(largestGroup))
 
-    const bmapStats = bitmapStats(largestGroup);
+    const bmapStats = getBitmapStats(largestGroup.karma, largestGroup.items, largestGroup.gasCost, encType);
     fs.writeFileSync(`${statsDir}/largestGroupBitmapStats.json`, JSON.stringify(bmapStats))
 
     // const index = makeAddressIndex(jsonData);

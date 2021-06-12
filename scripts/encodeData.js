@@ -104,10 +104,10 @@ const encodeRlp = (data) => {
         fData = data[fName]
 
         encodedData[fName] = {
-            newSingles: concat([hexlify([0]), encodeSinglesNew(fData.newSingles, 'rlp')]),
-            newGrouped: concat([hexlify([1]), encodeGroupsNew(fData.newGrouped, 'rlp')]),
-            repeatingSingles: concat([hexlify([2]), encodeSinglesRepeating(fData.repeatingSingles, 'rlp')]),
-            repeatingGrouped: concat([hexlify([3]), encodeGroupsRepeating(fData.repeatingGrouped, 'rlp')])
+            '01': concat([hexlify([0]), encodeSinglesNew(fData['01'], 'rlp')]),
+            '00': concat([hexlify([1]), encodeGroupsNew(fData['00'], 'rlp')]),
+            '11': concat([hexlify([2]), encodeSinglesRepeating(fData['11'], 'rlp')]),
+            '10': concat([hexlify([3]), encodeGroupsRepeating(fData['10'], 'rlp')])
         }
 
 

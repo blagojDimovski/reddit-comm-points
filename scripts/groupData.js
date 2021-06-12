@@ -1,7 +1,7 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const {readData, writeData} = require('./utils')
-const {dataDirs} = require('./consts')
+const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup, getByteSizeForRepeatingGroupBitmap, compareRepeatingGroupCosts} = require('./utils')
+const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps} = require('./consts')
 
 const groupByKarma = (data) => {
     const amountGroups = {};
@@ -61,103 +61,64 @@ const isSmallNum = (num) => {
     return parseInt(num) <= 255;
 }
 
-const splitGroupedDataBySize = (dataNew, dataRepeating) => {
-    // small = number that can be represented with 1 byte
-    // med = number that can be represented with more than 1 byte
 
-    const splitData = {
-        newSingles: {
-            amountSmall: {},
-            amountMed: {}
-        },
-        newGrouped: {
-            amountSmall: {
-                numAddrSmall: {},
-                numAddrMed: {},
-            },
-            amountMed: {
-                numAddrSmall: {},
-                numAddrMed: {}
-            }
-        },
-        repeatingSingles: {
-            amountSmall: {
-                addrSmall: {},
-                addrMed: {},
-            },
-            amountMed: {
-                addrSmall: {},
-                addrMed: {},
-            }
-        },
-        repeatingGrouped: {
-            amountSmall: {
-                numAddrSmall: {
-                    addrSmall: {},
-                    addrMed: {}
-                },
-                numAddrMed: {
-                    addrSmall: {},
-                    addrMed: {}
-                }
-            },
-            amountMed: {
-                numAddrSmall: {
-                    addrSmall: {},
-                    addrMed: {}
-                },
-                numAddrMed: {
-                    addrSmall: {},
-                    addrMed: {}
-                }
-            }
+const setGroupValue = (data, groupId, key, value) => {
+    if(groupId in data) {
+        data[groupId][key] = value;
+    } else {
+        data[groupId] = {
+            [key]: value
         }
     }
+}
 
-    for(let addr in dataNew.singles) {
-        let karma = dataNew.singles[addr];
-        if(isSmallNum(karma)) {
-            splitData.newSingles.amountSmall[addr] = karma;
-        } else {
-            splitData.newSingles.amountMed[addr] = karma;
-        }
+
+const groupNewSingles = (data, singles) => {
+    for(let addr in singles) {
+        let karma = singles[addr];
+        let karmaSm = isSmallNum(karma);
+        // 0 - new, 1 - single, 1 - small
+        let groupId = getBitGroupId([0, 1, karmaSm])
+        setGroupValue(data, groupId, addr, karma);
     }
+}
 
-    for (let karma in dataNew.groups) {
+const groupNewGroups = (data, groups) => {
+    for (let karma in groups) {
 
-        let addrs = dataNew.groups[karma];
+        let addrs = groups[karma];
         let addrsLen = addrs.length;
         let karmaSm = isSmallNum(karma);
         let addrsLenSm = isSmallNum(addrsLen);
-        if (karmaSm && addrsLenSm) {
-            splitData.newGrouped.amountSmall.numAddrSmall[karma] = addrs;
-        } else if (karmaSm && !addrsLenSm) {
-            splitData.newGrouped.amountSmall.numAddrMed[karma] = addrs;
-        } else if (!karmaSm && addrsLenSm) {
-            splitData.newGrouped.amountMed.numAddrSmall[karma] = addrs;
-        } else {
-            splitData.newGrouped.amountMed.numAddrMed[karma] = addrs;
-        }
+
+        let groupId = getBitGroupId([0, 0, karmaSm, addrsLenSm])
+        setGroupValue(data, groupId, karma, addrs);
 
     }
+};
 
-    for (let addr in dataRepeating.singles) {
-        let karma = dataRepeating.singles[addr];
+const groupRepeatingSingles = (data, singles) => {
+    for (let addr in singles) {
+        let karma = singles[addr];
         let addrSm = isSmallNum(addr);
         let karmaSm = isSmallNum(karma);
 
-        if(karmaSm && addrSm) {
-            splitData.repeatingSingles.amountSmall.addrSmall[addr] = karma;
-        } else if (karmaSm && !addrSm) {
-            splitData.repeatingSingles.amountSmall.addrMed[addr] = karma
-        } else if (!karmaSm && addrSm) {
-            splitData.repeatingSingles.amountMed.addrSmall[addr] = karma
-        } else {
-            splitData.repeatingSingles.amountMed.addrMed[addr] = karma
-        }
-
+        let groupId = getBitGroupId([1, 1, karmaSm, addrSm])
+        setGroupValue(data, groupId, addr, karma);
 
     }
+};
+
+const groupDataNative = (dataNew, dataRepeating) => {
+    // small = number that can be represented with 1 byte
+    // med = number that can be represented with more than 1 byte
+
+    const data = {}
+
+    groupNewSingles(data, dataNew.singles);
+    groupNewGroups(data, dataNew.groups);
+    groupRepeatingSingles(data, dataRepeating.singles)
+
 
     for (let karma in dataRepeating.groups) {
         let addrs = dataRepeating.groups[karma];
@@ -172,69 +133,143 @@ const splitGroupedDataBySize = (dataNew, dataRepeating) => {
             }
         }
 
-
-
         if(addrsSm.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsSm.pop();
-            if(karmaSm) {
-                splitData.repeatingSingles.amountSmall.addrSmall[addrId] = karma;
-            } else  {
-                splitData.repeatingSingles.amountMed.addrSmall[addrId] = karma;
-            }
+            let groupId = getBitGroupId([1, 1, karmaSm, 1]);
+            setGroupValue(data, groupId, addrId, karma);
         }
 
         if(addrsMd.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsMd.pop();
-            if(karmaSm) {
-                splitData.repeatingSingles.amountSmall.addrMed[addrId] = karma;
-            } else  {
-                splitData.repeatingSingles.amountMed.addrMed[addrId] = karma;
-            }
+            let groupId = getBitGroupId([1, 1, karmaSm, 0]);
+            setGroupValue(data, groupId, addrId, karma);
         }
 
         let addrsSmLenSm = isSmallNum(addrsSm.length);
         let addrsMdLenSm = isSmallNum(addrsMd.length);
 
-        if (karmaSm) {
+        if(addrsSm.length) {
+            let groupId = getBitGroupId([1, 0, karmaSm, addrsSmLenSm, 1])
+            setGroupValue(data, groupId, karma, addrsSm)
+        }
 
-            if(addrsSm.length && addrsSmLenSm) {
-                splitData.repeatingGrouped.amountSmall.numAddrSmall.addrSmall[karma] = addrsSm;
-            } else if (addrsSm.length && !addrsSmLenSm) {
-                splitData.repeatingGrouped.amountSmall.numAddrMed.addrSmall[karma] = addrsSm;
+        if (addrsMd.length) {
+            let groupId = getBitGroupId([1, 0, karmaSm, addrsMdLenSm, 0])
+            setGroupValue(data, groupId, karma, addrsMd)
+        }
+
+
+
+    }
+
+    return data;
+
+};
+
+
+const groupDataBitmaps = (dataNew, dataRepeating) => {
+    // small = number that can be represented with 1 byte
+    // med = number that can be represented with more than 1 byte
+
+    const data = {}
+
+    groupNewSingles(data, dataNew.singles);
+    groupNewGroups(data, dataNew.groups);
+    groupRepeatingSingles(data, dataRepeating.singles)
+
+    for (let karma in dataRepeating.groups) {
+        let addrs = dataRepeating.groups[karma];
+        let karmaSm = isSmallNum(karma);
+        let addrsSm = [];
+        let addrsMd = []
+
+        for (let addr of addrs) {
+            if(isSmallNum(addr)) {
+                addrsSm.push(addr);
+            } else {
+                addrsMd.push(addr);
             }
+        }
 
-            if (addrsMd.length && addrsMdLenSm) {
-                splitData.repeatingGrouped.amountSmall.numAddrSmall.addrMed[karma] = addrsMd;
-            } else if (addrsMd.length && !addrsMdLenSm) {
-                splitData.repeatingGrouped.amountSmall.numAddrMed.addrMed[karma] = addrsMd;
+        if(addrsSm.length === 1) {
+            // it is cheaper to classify this entity as repeated single rather than group
+            let addrId = addrsSm.pop();
+            let groupId = getBitGroupId([1, 1, karmaSm, 1]);
+            setGroupValue(data, groupId, addrId, karma);
+        }
+
+        if(addrsMd.length === 1) {
+            // it is cheaper to classify this entity as repeated single rather than group
+            let addrId = addrsMd.pop();
+            let groupId = getBitGroupId([1, 1, karmaSm, 0]);
+            setGroupValue(data, groupId, addrId, karma);
+        }
+
+        if(addrs.length > 3 && addrsMd.length && addrsSm.length) {
+            let costsBitmasks = getByteSizeForRepeatingGroupBitmap(karma, addrs, 'native');
+            let costsAddrSmall = getByteSizeForRepeatingGroup(karma, addrsSm, 'native');
+            if (costsBitmasks < costsAddrSmall) {
+                setAsRepeatingGroupedBitmap(data.repeatingGroupedBitmaps, karma, karmaSm, addrs)
+            } else {
+                let costsAddrMed = getByteSizeForRepeatingGroup(karma, addrsMd, 'native');
+                if(costsBitmasks < costsAddrMed) {
+                    setAsRepeatingGroupedBitmap(data.repeatingGroupedBitmaps, karma, karmaSm, addrs)
+                } else {
+                    setAsRepeatingGrouped(data.repeatingGrouped, karma, karmaSm, addrsSm, addrsMd)
+                }
             }
-
         } else {
-
-            if(addrsSm.length && addrsSmLenSm) {
-                splitData.repeatingGrouped.amountMed.numAddrSmall.addrSmall[karma] = addrsSm;
-            } else if(addrsSm.length && !addrsSmLenSm) {
-                splitData.repeatingGrouped.amountMed.numAddrMed.addrSmall[karma] = addrsSm;
-            }
-
-            if (addrsMd.length && addrsMdLenSm) {
-                splitData.repeatingGrouped.amountMed.numAddrSmall.addrMed[karma] = addrsMd;
-            } else if (addrsMd.length && !addrsMdLenSm) {
-                splitData.repeatingGrouped.amountMed.numAddrMed.addrMed[karma] = addrsMd;
-            }
-
+            setAsRepeatingGrouped(data.repeatingGrouped, karma, karmaSm, addrsSm, addrsMd)
         }
 
 
     }
 
-    return splitData;
+    return data;
 
-};
+}
 
-const group = (data, encType='rlp') => {
+const getBitGroupId = (inputs) => {
+    let bitmask = '';
+    for(let input of inputs) {
+        let inputBit = input ? '1' : '0';
+        bitmask = `${bitmask}${inputBit}`
+    }
+
+    return bitmask;
+}
+
+const setAsRepeatingGrouped = (data, karma, karmaSm, addrsSm, addrsMd) => {
+    let addrsSmLenSm = isSmallNum(addrsSm.length);
+    let addrsMdLenSm = isSmallNum(addrsMd.length);
+
+    if(addrsSm.length) {
+        let groupId = getBitGroupId([1, 0, karmaSm, addrsSmLenSm, 1])
+        setGroupValue(data, groupId, karma, addrsSm)
+    }
+
+    if (addrsMd.length) {
+        let groupId = getBitGroupId([1, 0, karmaSm, addrsMdLenSm, 0])
+        setGroupValue(data, groupId, karma, addrsMd)
+    }
+
+}
+
+
+const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, addrs) => {
+    let bitmapStats = getBitmapStats(karma, addrs, 'native');
+    let startIdSm = isSmallNum(bitmapStats.startId);
+    let rangeSm = isSmallNum(bitmapStats.range);
+    let headerSm = isSmallNum(bitmapStats.headerBytes)
+
+    let groupId = getBitGroupId([1, 0, karmaSm, startIdSm, rangeSm, headerSm]);
+    setGroupValue(data, groupId, karma, bitmapStats)
+}
+
+
+const group = (data, encType='rlp', bitmaps= false) => {
 
     let index = {};
     let groupedData = {};
@@ -247,13 +282,15 @@ const group = (data, encType='rlp') => {
 
         if(encType === 'rlp') {
             groupedData[fName] = {
-                newGrouped: groupedNew.groups,
-                newSingles: groupedNew.singles,
-                repeatingGrouped: groupedRepeating.groups,
-                repeatingSingles: groupedRepeating.singles
+                '00': groupedNew.groups,
+                '01': groupedNew.singles,
+                '10': groupedRepeating.groups,
+                '11': groupedRepeating.singles
             }
+        } else if (encType === 'native') {
+            groupedData[fName] = groupDataNative(groupedNew, groupedRepeating)
         } else {
-            groupedData[fName] = splitGroupedDataBySize(groupedNew, groupedRepeating)
+            groupedData[fName] = groupDataBitmaps(groupedNew, groupedRepeating)
         }
 
     }
