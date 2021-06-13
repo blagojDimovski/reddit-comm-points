@@ -93,6 +93,9 @@ const encodeGroupsRepeating = (data, encType = 'rlp') => {
 }
 
 
+let getDecimalFromBits = (bits) => {
+    return parseInt(bits, 2);
+}
 
 const encodeRlp = (data) => {
 
@@ -102,13 +105,33 @@ const encodeRlp = (data) => {
 
     for (let fName in data) {
         fData = data[fName]
+        encodedData[fName] = {}
+        for (let key in fData) {
+            let encoded;
+            switch(key) {
+                case '00000000':
+                    encoded = encodeSinglesNew(fData[key], 'rlp')
+                    break;
+                case '00000010':
+                    encoded = encodeGroupsNew(fData[key], 'rlp')
+                    break;
+                case '00000100':
+                    encoded = encodeSinglesRepeating(fData[key], 'rlp')
+                    break;
+                case '00000110':
+                    encoded = encodeGroupsRepeating(fData[key], 'rlp')
+                    break;
+                default:
+                    break;
+            }
 
-        encodedData[fName] = {
-            '01': concat([hexlify([0]), encodeSinglesNew(fData['01'], 'rlp')]),
-            '00': concat([hexlify([1]), encodeGroupsNew(fData['00'], 'rlp')]),
-            '11': concat([hexlify([2]), encodeSinglesRepeating(fData['11'], 'rlp')]),
-            '10': concat([hexlify([3]), encodeGroupsRepeating(fData['10'], 'rlp')])
+            if(encoded) {
+                let id = parseInt(key, 2);
+                encodedData[fName][key] = concat([hexlify([id]), encoded]);
+            }
+
         }
+
 
 
     }

@@ -77,8 +77,7 @@ const groupNewSingles = (data, singles) => {
     for(let addr in singles) {
         let karma = singles[addr];
         let karmaSm = isSmallNum(karma);
-        // 0 - new, 1 - single, 1 - small
-        let groupId = getBitGroupId([0, 1, karmaSm])
+        let groupId = getBitGroupId([karmaSm, 0, 0, 1])
         setGroupValue(data, groupId, addr, karma);
     }
 }
@@ -91,7 +90,7 @@ const groupNewGroups = (data, groups) => {
         let karmaSm = isSmallNum(karma);
         let addrsLenSm = isSmallNum(addrsLen);
 
-        let groupId = getBitGroupId([0, 0, karmaSm, addrsLenSm])
+        let groupId = getBitGroupId([addrsLenSm, 0, karmaSm, 0, 1, 1])
         setGroupValue(data, groupId, karma, addrs);
 
     }
@@ -103,7 +102,7 @@ const groupRepeatingSingles = (data, singles) => {
         let addrSm = isSmallNum(addr);
         let karmaSm = isSmallNum(karma);
 
-        let groupId = getBitGroupId([1, 1, karmaSm, addrSm])
+        let groupId = getBitGroupId([addrSm, karmaSm, 1, 0, 1])
         setGroupValue(data, groupId, addr, karma);
 
     }
@@ -136,29 +135,18 @@ const groupDataNative = (dataNew, dataRepeating) => {
         if(addrsSm.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsSm.pop();
-            let groupId = getBitGroupId([1, 1, karmaSm, 1]);
+            let groupId = getBitGroupId([1, karmaSm, 1, 0, 1]);
             setGroupValue(data, groupId, addrId, karma);
         }
 
         if(addrsMd.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsMd.pop();
-            let groupId = getBitGroupId([1, 1, karmaSm, 0]);
+            let groupId = getBitGroupId([0 ,karmaSm, 1, 0, 1]);
             setGroupValue(data, groupId, addrId, karma);
         }
 
-        let addrsSmLenSm = isSmallNum(addrsSm.length);
-        let addrsMdLenSm = isSmallNum(addrsMd.length);
-
-        if(addrsSm.length) {
-            let groupId = getBitGroupId([1, 0, karmaSm, addrsSmLenSm, 1])
-            setGroupValue(data, groupId, karma, addrsSm)
-        }
-
-        if (addrsMd.length) {
-            let groupId = getBitGroupId([1, 0, karmaSm, addrsMdLenSm, 0])
-            setGroupValue(data, groupId, karma, addrsMd)
-        }
+        setAsRepeatingGrouped(data, karma, karmaSm, addrsSm, addrsMd);
 
 
 
@@ -196,14 +184,14 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
         if(addrsSm.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsSm.pop();
-            let groupId = getBitGroupId([1, 1, karmaSm, 1]);
+            let groupId = getBitGroupId(getBitGroupId([1, karmaSm, 1, 0, 1]));
             setGroupValue(data, groupId, addrId, karma);
         }
 
         if(addrsMd.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsMd.pop();
-            let groupId = getBitGroupId([1, 1, karmaSm, 0]);
+            let groupId = getBitGroupId([0, karmaSm, 1, 0, 1]);
             setGroupValue(data, groupId, addrId, karma);
         }
 
@@ -237,6 +225,9 @@ const getBitGroupId = (inputs) => {
         let inputBit = input ? '1' : '0';
         bitmask = `${bitmask}${inputBit}`
     }
+    if (bitmask.length < 8) {
+        bitmask = bitmask.padStart(8, "0");
+    }
 
     return bitmask;
 }
@@ -246,12 +237,12 @@ const setAsRepeatingGrouped = (data, karma, karmaSm, addrsSm, addrsMd) => {
     let addrsMdLenSm = isSmallNum(addrsMd.length);
 
     if(addrsSm.length) {
-        let groupId = getBitGroupId([1, 0, karmaSm, addrsSmLenSm, 1])
+        let groupId = getBitGroupId([addrsSmLenSm, 1, karmaSm, 1, 1, 1])
         setGroupValue(data, groupId, karma, addrsSm)
     }
 
     if (addrsMd.length) {
-        let groupId = getBitGroupId([1, 0, karmaSm, addrsMdLenSm, 0])
+        let groupId = getBitGroupId([addrsMdLenSm, 0, karmaSm, 1, 1, 1])
         setGroupValue(data, groupId, karma, addrsMd)
     }
 
@@ -264,7 +255,7 @@ const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, addrs) => {
     let rangeSm = isSmallNum(bitmapStats.range);
     let headerSm = isSmallNum(bitmapStats.headerBytes)
 
-    let groupId = getBitGroupId([1, 0, karmaSm, startIdSm, rangeSm, headerSm]);
+    let groupId = getBitGroupId([1, startIdSm, rangeSm, headerSm, karmaSm, 1, 1, 1]);
     setGroupValue(data, groupId, karma, bitmapStats)
 }
 
@@ -282,10 +273,10 @@ const group = (data, encType='rlp', bitmaps= false) => {
 
         if(encType === 'rlp') {
             groupedData[fName] = {
-                '00': groupedNew.groups,
-                '01': groupedNew.singles,
-                '10': groupedRepeating.groups,
-                '11': groupedRepeating.singles
+                '00000000': groupedNew.singles,
+                '00000010': groupedNew.groups,
+                '00000100': groupedRepeating.singles,
+                '00000110': groupedRepeating.groups
             }
         } else if (encType === 'native') {
             groupedData[fName] = groupDataNative(groupedNew, groupedRepeating)
