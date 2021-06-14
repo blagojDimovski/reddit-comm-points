@@ -1,7 +1,7 @@
 /* eslint no-use-before-define: "warn" */
 const { ethers } = require("hardhat");
 const rlp = require('rlp')
-const {ADDR_BYTES, SMALL_BYTES, MED_BYTES} = require('./consts')
+const {ADDR_BYTES, SMALL_BYTES, MED_BYTES, getGroupBitKeys} = require('./consts')
 const { readData, writeData } = require('./utils');
 
 const isInputValid = (hex) => {
@@ -13,9 +13,8 @@ const nativeDecodeNewSingles = (input, amountLen = 1) => {
     let pointer = 0;
 
     addresses = {
+
     };
-    input = ethers.utils.hexlify(input)
-    input = ethers.utils.hexDataSlice(input, 1);
 
     while(input.length > 2) {
         let addr = ethers.utils.hexDataSlice(input, pointer, pointer + ADDR_BYTES);
@@ -42,8 +41,8 @@ const nativeDecodeNewGrouped = (input, amountLen= 1, numAddrLen = 1) => {
     };
 
     let pointer = 0;
-    input = ethers.utils.hexlify(input);
-    input = ethers.utils.hexDataSlice(input, 1);
+
+
     while(input.length > 2) {
         let amount = ethers.utils.hexDataSlice(input, pointer, pointer + amountLen);
 
@@ -74,8 +73,6 @@ const nativeDecodeRepeatingSingles = (input, amountLen= 1, idLen= 1) => {
     };
 
     let pointer = 0;
-    input = ethers.utils.hexlify(input);
-    input = ethers.utils.hexDataSlice(input, 1);
 
     while(input.length > 2) {
         let id = ethers.utils.hexDataSlice(input, pointer, pointer + idLen )
@@ -100,8 +97,7 @@ const nativeDecodeRepeatingGrouped = (input, amountLen= 1, numAddrLen = 1, idLen
     };
 
     let pointer = 0;
-    input = ethers.utils.hexlify(input);
-    input = ethers.utils.hexDataSlice(input, 1);
+
 
     while(input.length > 2) {
         let amount = ethers.utils.hexDataSlice(input, pointer, pointer + amountLen )
@@ -126,9 +122,77 @@ const nativeDecodeRepeatingGrouped = (input, amountLen= 1, numAddrLen = 1, idLen
     return groups;
 }
 
+const bitmapDecodeRepeatingGrouped = (input, amountLen= 1, startIdLen = 1, rangeLen = 1, headerLen = 1) => {
+
+    groups = {
+
+    };
+
+    let pointer = 0;
+
+
+    while(input.length > 2) {
+        let amount = ethers.utils.hexDataSlice(input, pointer, pointer + amountLen )
+        amount = ethers.BigNumber.from(amount).toString();
+        groups[amount] = {
+            startId: 0,
+            range: 0,
+            headerBytes: 0,
+            bitmapStr: ''
+        };
+        pointer += amountLen;
+
+        let startId = ethers.utils.hexDataSlice(input, pointer, pointer + startIdLen )
+        startId = ethers.BigNumber.from(startId).toNumber();
+        groups[amount].startId = startId;
+        pointer += startIdLen;
+
+        let range = ethers.utils.hexDataSlice(input, pointer, pointer + rangeLen )
+        range = ethers.BigNumber.from(range).toNumber();
+        groups[amount].range = range;
+        pointer += rangeLen;
+
+        let headerBytes = ethers.utils.hexDataSlice(input, pointer, pointer + headerLen )
+        headerBytes = ethers.BigNumber.from(headerBytes).toNumber()
+        groups[amount].headerBytes = headerBytes;
+        pointer += headerLen;
+
+        let header = ethers.utils.hexDataSlice(input, pointer, pointer + headerBytes )
+        pointer += headerBytes;
+
+        let bitmap = BigInt(0);
+        let headerArray = ethers.utils.arrayify(header);
+
+        for(let i = 0; i < headerArray.length; i++) {
+            let byte = headerArray[i];
+            let num = ethers.BigNumber.from(byte).toNumber();
+            if(num === 0) {
+                // TODO: add 0 bits to bitmap
+                bitmap = `${bitmap}`
+            } else {
+                let nonEmptyBitmapByte = ethers.utils.hexDataSlice(input, pointer, pointer + 1 )
+                pointer += 1
+
+                let num = parseInt(nonEmptyBitmapByte, 16)
+                let bits = (num.toString(2)).padStart(8, '0');
+                // TODO: add the bits to the bitmap
+            }
+
+        }
+
+        groups[amount].bitmapStr = bitmap.toString(2);
+
+        input = ethers.utils.hexDataSlice(input, pointer)
+        pointer = 0;
+    }
+
+    return groups;
+}
+
+
 const rlpDecodeNewSingles = (input) => {
 
-    let pointer = 1;
+    let pointer = 0;
 
     addresses = {
     };
@@ -154,7 +218,6 @@ const rlpDecodeNewGrouped = (input) => {
 
     };
 
-    input = ethers.utils.hexDataSlice(input, 1);
 
     while(input.length > 2) {
         let decoded = rlp.decode(input, true);
@@ -181,7 +244,6 @@ const rlpDecodeRepeatingSingles = (input) => {
     ids = {
     };
 
-    input = ethers.utils.hexDataSlice(input, 1)
 
     while(input.length > 2) {
         let decoded = rlp.decode(input, true);
@@ -201,8 +263,6 @@ const rlpDecodeRepeatingGrouped = (input) => {
     groups = {
 
     };
-
-    input = ethers.utils.hexDataSlice(input, 1);
 
     while(input.length > 2) {
         input = rlp.decode(input, true);
@@ -225,47 +285,103 @@ const rlpDecodeRepeatingGrouped = (input) => {
     return groups;
 }
 
+const handleDecoding = (key, data) => {
+    let decoded;
+    let groupsBitKeys = getGroupBitKeys();
 
-const decodeRlp = (data) => {
-
-    const decodedData = {
-
-    };
-
-    for (let fName in data) {
-        let fData = data[fName];
-        let fDecodedData = {};
-        for(let key in fData) {
-            let binaryData = fData[key];
-            let size = Buffer.byteLength(binaryData);
-            let binData = binaryData.toString('hex');
-            let binDataHex = "0x" + binData;
-            let dataSlice1 = ethers.utils.hexDataSlice(binDataHex, 0, 1)
-            let batchType = parseInt(dataSlice1, 16)
-            let decodedData;
-
-            if(batchType === 0) {
-                decodedData = rlpDecodeNewSingles(binDataHex, size)
-            } else if (batchType === 1) {
-                decodedData = rlpDecodeNewGrouped(binDataHex, size)
-            } else if (batchType === 2) {
-                decodedData = rlpDecodeRepeatingSingles(binDataHex, size)
-            } else {
-                decodedData = rlpDecodeRepeatingGrouped(binDataHex, size)
-            }
-            fDecodedData[key] = decodedData;
-
-        }
-
-        decodedData[fName] = fDecodedData;
-
+    if(key === groupsBitKeys.rlpSingleNew.dec) {
+        decodedData = rlpDecodeNewSingles(data)
+    } else if (key === groupsBitKeys.rlpGroupNew.dec) {
+        decodedData = rlpDecodeNewGrouped(data)
+    } else if (key === groupsBitKeys.rlpSingleRepeat.dec) {
+        decodedData = rlpDecodeRepeatingSingles(data)
+    } else if (key === groupsBitKeys.rlpGroupRepeat.dec) {
+        decodedData = rlpDecodeRepeatingGrouped(data)
     }
 
-    return decodedData;
+    else if(key === groupsBitKeys.nativeSingleNewAmountSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeSingleNewAmountMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    }
 
+    else if (key === groupsBitKeys.nativeGroupNewAmountSmallAddrLenSmall.dec) {
+        decoded = nativeDecodeNewGrouped(data, SMALL_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupNewAmountSmallAddrLenMed.dec) {
+        decoded = nativeDecodeNewGrouped(data, SMALL_BYTES, MED_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupNewAmountMedAddrLenSmall.dec) {
+        decoded = nativeDecodeNewGrouped(data, MED_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupNewAmountMedAddrLenMed.dec) {
+        decoded = nativeDecodeNewGrouped(data, MED_BYTES, MED_BYTES);
+    }
+
+    else if (key === groupsBitKeys.nativeSingleRepeatAmountSmallAddrSmall.dec) {
+        decoded = nativeDecodeRepeatingSingles(data, SMALL_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeSingleRepeatAmountSmallAddrMed.dec) {
+        decoded = nativeDecodeRepeatingSingles(data, SMALL_BYTES, MED_BYTES);
+    } else if (key === groupsBitKeys.nativeSingleRepeatAmountMedAddrSmall.dec) {
+        decoded = nativeDecodeRepeatingSingles(data, MED_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeSingleRepeatAmountMedAddrMed.dec) {
+        decoded = nativeDecodeRepeatingSingles(data, MED_BYTES, MED_BYTES);
+    }
+
+    else if (key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenSmallAddrSmall.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, SMALL_BYTES, SMALL_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenSmallAddrMed.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, SMALL_BYTES, SMALL_BYTES, MED_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenMedAddrSmall.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, SMALL_BYTES, MED_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenMedAddrMed.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, SMALL_BYTES, MED_BYTES, MED_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenSmallAddrSmall.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, MED_BYTES, SMALL_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenSmallAddrMed.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, MED_BYTES, SMALL_BYTES, MED_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenMedAddrSmall.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, MED_BYTES, MED_BYTES, SMALL_BYTES);
+    } else if (key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenMedAddrMed.dec) {
+        decoded = nativeDecodeRepeatingGrouped(data, MED_BYTES, MED_BYTES, MED_BYTES);
+    }
+
+
+    else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumSmallRangeSmallStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumSmallRangeSmallStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumSmallRangeMedStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumSmallRangeMedStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumMedRangeSmallStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumMedRangeSmallStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumMedRangeMedStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountSmallHeaderNumMedRangeMedStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumSmallRangeSmallStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumSmallRangeSmallStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumSmallRangeMedStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumSmallRangeMedStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumMedRangeSmallStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumMedRangeSmallStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumMedRangeMedStartIdSmall.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    } else if (key === groupsBitKeys.bitmaskAmountMedHeaderNumMedRangeMedStartIdMed.dec) {
+        decoded = nativeDecodeNewSingles(data, MED_BYTES);
+    }
+
+    return decoded;
 };
 
-const decodeNative = (data) => {
+const decode = (data) => {
 
     let decodedData = {
 
@@ -273,58 +389,26 @@ const decodeNative = (data) => {
 
     for (let fName in data) {
         let fData = data[fName];
-        try {
-            decodedData[fName] = {
-            newSingles: {
-                amountSmall: nativeDecodeNewSingles(fData.newSingles.amountSmall, SMALL_BYTES),
-                amountMed: nativeDecodeNewSingles(fData.newSingles.amountMed, MED_BYTES)
-            },
-            newGrouped: {
-                amountSmall: {
-                    numAddrSmall: nativeDecodeNewGrouped(fData.newGrouped.amountSmall.numAddrSmall, SMALL_BYTES, SMALL_BYTES),
-                    numAddrMed: nativeDecodeNewGrouped(fData.newGrouped.amountSmall.numAddrMed, SMALL_BYTES, MED_BYTES)
-                },
-                amountMed: {
-                    numAddrSmall: nativeDecodeNewGrouped(fData.newGrouped.amountMed.numAddrSmall, MED_BYTES, SMALL_BYTES),
-                    numAddrMed: nativeDecodeNewGrouped(fData.newGrouped.amountMed.numAddrMed, MED_BYTES, MED_BYTES)
-                }
-            },
-            repeatingSingles: {
-                amountSmall: {
-                    addrSmall: nativeDecodeRepeatingSingles(fData.repeatingSingles.amountSmall.addrSmall, SMALL_BYTES, SMALL_BYTES),
-                    addrMed: nativeDecodeRepeatingSingles(fData.repeatingSingles.amountSmall.addrMed, SMALL_BYTES, MED_BYTES)
-                },
-                amountMed: {
-                    addrSmall: nativeDecodeRepeatingSingles(fData.repeatingSingles.amountMed.addrSmall, MED_BYTES, SMALL_BYTES),
-                    addrMed: nativeDecodeRepeatingSingles(fData.repeatingSingles.amountMed.addrMed, MED_BYTES, MED_BYTES)
-                }
-            },
-            repeatingGrouped: {
-                amountSmall: {
-                    numAddrSmall: {
-                        addrSmall: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountSmall.numAddrSmall.addrSmall, SMALL_BYTES, SMALL_BYTES, SMALL_BYTES),
-                        addrMed: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountSmall.numAddrSmall.addrMed, SMALL_BYTES, SMALL_BYTES, MED_BYTES)
-                    },
-                    numAddrMed: {
-                        addrSmall: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountSmall.numAddrMed.addrSmall, SMALL_BYTES, MED_BYTES, SMALL_BYTES),
-                        addrMed: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountSmall.numAddrMed.addrMed, SMALL_BYTES, MED_BYTES, MED_BYTES)
-                    }
-                },
-                amountMed: {
-                    numAddrSmall: {
-                        addrSmall: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountMed.numAddrSmall.addrSmall, MED_BYTES, SMALL_BYTES, SMALL_BYTES),
-                        addrMed: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountMed.numAddrSmall.addrMed, MED_BYTES, SMALL_BYTES, MED_BYTES)
-                    },
-                    numAddrMed: {
-                        addrSmall: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountMed.numAddrMed.addrSmall, MED_BYTES, MED_BYTES, SMALL_BYTES),
-                        addrMed: nativeDecodeRepeatingGrouped(fData.repeatingGrouped.amountMed.numAddrMed.addrMed, MED_BYTES, MED_BYTES, MED_BYTES)
-                    }
-                }
+        let fDecodedData = {};
+
+        for (let key in fData) {
+            let binaryData = fData[key];
+            let binData = binaryData.toString('hex');
+            let binDataHex = "0x" + binData;
+            let remainder = ethers.utils.hexDataSlice(binDataHex, 1)
+            let batchType = ethers.utils.hexDataSlice(binDataHex, 0, 1)
+            batchType = parseInt(batchType, 16)
+
+            try {
+                fDecodedData[key] = handleDecoding(batchType, remainder);
+            } catch (e) {
+                console.error(`Error while decoding data, encType, fName: ${fName}.`, e)
             }
+
         }
-        } catch (e) {
-            console.error(`Error while decoding data, encType: [native] fName: ${fName}.`, e)
-        }
+
+        decodedData[fName] = fDecodedData;
+
     }
 
     return decodedData
@@ -338,14 +422,14 @@ const decodeData = (argv) => {
     const dataset = argv.dataset;
     const encType = argv.encType;
 
-    console.log(`[${dataset}] Decoding data, enc type: [${encType}]...`);
+    console.log(`[${dataset}][${encType}] Decoding data...`);
 
     const encodedData = readData(dataset, 'encoded', encType);
-    let decodedData = encType === 'rlp' ? decodeRlp(encodedData) : decodeNative(encodedData);
+    let decodedData = decode(encodedData);
 
     writeData(decodedData, dataset, 'decoded', encType);
 
-    console.log(`[${dataset}] Data decoded! Enc type: [${encType}]...`);
+    console.log(`[${dataset}][${encType}] Data decoded!`);
 
 
 };

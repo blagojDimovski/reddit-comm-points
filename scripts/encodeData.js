@@ -3,7 +3,7 @@ const fs = require("fs");
 const {  ethers } = require("hardhat");
 const rlp = require('rlp')
 const {getFileNames, readData, writeData} = require('./utils')
-
+const {getGroupBitKeys} = require('./consts')
 const {concat, arrayify, hexlify } = ethers.utils;
 
 const numberToBytes = (num) => {
@@ -92,55 +92,82 @@ const encodeGroupsRepeating = (data, encType = 'rlp') => {
     return concat(encodedData);
 }
 
+const encodeGroupsRepeatingBitmap = (data, encType = 'rlp') => {
+    let encodedData = [];
+    // TODO: test this out
+    for (let amount of Object.keys(data)) {
+        let amountEncoded = numberToBytes(amount);
+        let startIdEncoded = numberToBytes(data[amount].startId)
+        let rangeEncoded = numberToBytes(data[amount].range)
+        let headerLenEncoded = numberToBytes(data[amount].headerBytes)
 
-let getDecimalFromBits = (bits) => {
-    return parseInt(bits, 2);
-}
+        let header = BigInt(`0b${data[amount].header}`)
+        let headerEncoded = numberToBytes(header)
 
-const encodeRlp = (data) => {
+        let bitmap = BigInt(`0b${data[amount].compressedBitmap}`)
+        let bitmapEncoded = numberToBytes(bitmap)
 
-    const encodedData = {
-
-    };
-
-    for (let fName in data) {
-        fData = data[fName]
-        encodedData[fName] = {}
-        for (let key in fData) {
-            let encoded;
-            switch(key) {
-                case '00000000':
-                    encoded = encodeSinglesNew(fData[key], 'rlp')
-                    break;
-                case '00000010':
-                    encoded = encodeGroupsNew(fData[key], 'rlp')
-                    break;
-                case '00000100':
-                    encoded = encodeSinglesRepeating(fData[key], 'rlp')
-                    break;
-                case '00000110':
-                    encoded = encodeGroupsRepeating(fData[key], 'rlp')
-                    break;
-                default:
-                    break;
-            }
-
-            if(encoded) {
-                let id = parseInt(key, 2);
-                encodedData[fName][key] = concat([hexlify([id]), encoded]);
-            }
-
+        if (encType === 'rlp') {
+            amountEncoded = rlp.encode(amountEncoded);
+            startIdEncoded = rlp.encode(startIdEncoded)
+            rangeEncoded = rlp.encode(rangeEncoded)
+            headerLenEncoded = rlp.encode(headerLenEncoded)
         }
 
-
-
+        let itemBytes = concat([amountEncoded, startIdEncoded, rangeEncoded, headerLenEncoded, headerEncoded, bitmapEncoded]);
+        encodedData.push(itemBytes)
     }
 
-    return encodedData;
-
+    return concat(encodedData);
 }
 
-const encodeNative = (data) => {
+
+const handleEncoding = (key, data) => {
+    let encoded;
+    let groupsBitKeys = getGroupBitKeys();
+
+    if(key === groupsBitKeys.rlpSingleNew.bin) {
+        encoded = encodeSinglesNew(data, 'rlp')
+    } else if (key === groupsBitKeys.rlpGroupNew.bin) {
+        encoded = encodeGroupsNew(data, 'rlp')
+    } else if (key === groupsBitKeys.rlpSingleRepeat.bin) {
+        encoded = encodeSinglesRepeating(data, 'rlp')
+    } else if (key === groupsBitKeys.rlpGroupRepeat.bin) {
+        encoded = encodeGroupsRepeating(data, 'rlp')
+    } else if (key === groupsBitKeys.nativeSingleNewAmountSmall.bin || key === groupsBitKeys.nativeSingleNewAmountMed.bin) {
+        encoded = encodeSinglesNew(data, 'native')
+    } else if (
+        key === groupsBitKeys.nativeGroupNewAmountSmallAddrLenSmall.bin ||
+        key === groupsBitKeys.nativeGroupNewAmountSmallAddrLenMed.bin ||
+        key === groupsBitKeys.nativeGroupNewAmountMedAddrLenSmall.bin ||
+        key === groupsBitKeys.nativeGroupNewAmountMedAddrLenMed.bin
+    ) {
+        encoded = encodeGroupsNew(data, 'native');
+    } else if (
+        key === groupsBitKeys.nativeSingleRepeatAmountSmallAddrSmall.bin ||
+        key === groupsBitKeys.nativeSingleRepeatAmountSmallAddrMed.bin ||
+        key === groupsBitKeys.nativeSingleRepeatAmountMedAddrSmall.bin ||
+        key === groupsBitKeys.nativeSingleRepeatAmountMedAddrMed.bin
+    ) {
+        encoded = encodeSinglesRepeating(data, 'native')
+    } else if (
+        key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenSmallAddrSmall.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenSmallAddrMed.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenMedAddrSmall.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountSmallAddrLenMedAddrMed.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenSmallAddrSmall.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenSmallAddrMed.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenMedAddrSmall.bin ||
+        key === groupsBitKeys.nativeGroupRepeatAmountMedAddrLenMedAddrMed.bin
+    ) {
+        encoded = encodeGroupsRepeating(data, 'native')
+    } else {
+        encoded = encodeGroupsRepeatingBitmap(data, 'native')
+    }
+    return encoded
+}
+
+const encode = (data) => {
 
     const encodedData = {
 
@@ -149,53 +176,15 @@ const encodeNative = (data) => {
     for(let fName in data) {
         fData = data[fName]
 
-        encodedData[fName] = {
-            newSingles: {
-                amountSmall: concat([hexlify([0]), encodeSinglesNew(fData.newSingles.amountSmall, 'native')]),
-                amountMed: concat([hexlify([1]), encodeSinglesNew(fData.newSingles.amountMed, 'native')]),
-            },
-            newGrouped: {
-                amountSmall: {
-                    numAddrSmall: concat([hexlify([2]), encodeGroupsNew(fData.newGrouped.amountSmall.numAddrSmall, 'native')]),
-                    numAddrMed: concat([hexlify([3]), encodeGroupsNew(fData.newGrouped.amountSmall.numAddrMed, 'native')]),
-                },
-                amountMed: {
-                    numAddrSmall: concat([hexlify([4]), encodeGroupsNew(fData.newGrouped.amountMed.numAddrSmall, 'native')]),
-                    numAddrMed: concat([hexlify([5]), encodeGroupsNew(fData.newGrouped.amountMed.numAddrMed, 'native')]),
-                }
-            },
-            repeatingSingles: {
-                amountSmall: {
-                    addrSmall: concat([hexlify([6]), encodeSinglesRepeating(fData.repeatingSingles.amountSmall.addrSmall, 'native')]),
-                    addrMed: concat([hexlify([7]), encodeSinglesRepeating(fData.repeatingSingles.amountSmall.addrMed, 'native')]),
-                },
-                amountMed: {
-                    addrSmall: concat([hexlify([8]), encodeSinglesRepeating(fData.repeatingSingles.amountMed.addrSmall, 'native')]),
-                    addrMed: concat([hexlify([9]), encodeSinglesRepeating(fData.repeatingSingles.amountMed.addrMed, 'native')]),
-                }
-            },
-            repeatingGrouped: {
-                amountSmall: {
-                    numAddrSmall: {
-                        addrSmall: concat([hexlify([10]), encodeGroupsRepeating(fData.repeatingGrouped.amountSmall.numAddrSmall.addrSmall, 'native')]),
-                        addrMed: concat([hexlify([11]), encodeGroupsRepeating(fData.repeatingGrouped.amountSmall.numAddrSmall.addrMed, 'native')])
-                    },
-                    numAddrMed: {
-                        addrSmall: concat([hexlify([12]), encodeGroupsRepeating(fData.repeatingGrouped.amountSmall.numAddrMed.addrSmall, 'native')]),
-                        addrMed: concat([hexlify([13]), encodeGroupsRepeating(fData.repeatingGrouped.amountSmall.numAddrMed.addrMed, 'native')])
-                    }
-                },
-                amountMed: {
-                    numAddrSmall: {
-                        addrSmall: concat([hexlify([14]), encodeGroupsRepeating(fData.repeatingGrouped.amountMed.numAddrSmall.addrSmall, 'native')]),
-                        addrMed: concat([hexlify([15]), encodeGroupsRepeating(fData.repeatingGrouped.amountMed.numAddrSmall.addrMed, 'native')]),
-                    },
-                    numAddrMed: {
-                        addrSmall: concat([hexlify([16]), encodeGroupsRepeating(fData.repeatingGrouped.amountMed.numAddrMed.addrSmall, 'native')]),
-                        addrMed: concat([hexlify([17]), encodeGroupsRepeating(fData.repeatingGrouped.amountMed.numAddrMed.addrMed, 'native')])
-                    }
-                }
-            }
+
+        encodedData[fName] = {}
+        for (let key in fData) {
+            if(!fData.hasOwnProperty(key)) continue;
+            let dataGroup = fData[key];
+            let encoded = handleEncoding(key, dataGroup);
+
+            let id = parseInt(key, 2);
+            encodedData[fName][key] = concat([hexlify([id]), encoded]);
         }
 
     }
@@ -212,7 +201,7 @@ const encodeData = (argv) => {
     console.log(`[${dataset}] Encoding data, enc type: [${encType}]...`);
 
     const groupedData = readData(dataset, 'grouped',encType);
-    let encodedData = encType === 'rlp' ? encodeRlp(groupedData) : encodeNative(groupedData);
+    let encodedData = encode(groupedData)
 
     writeData(encodedData, dataset, 'encoded', encType);
 

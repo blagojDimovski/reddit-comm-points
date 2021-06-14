@@ -1,5 +1,5 @@
 const fs = require("fs");
-const {dataDirs, RLP_MULTI_DIGIT_BYTES, RLP_SINGLE_DIGIT_BYTES, SMALL_BYTES, MED_BYTES} = require('./consts')
+const {dataDirs, RLP_MULTI_DIGIT_BYTES, RLP_SINGLE_DIGIT_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE} = require('./consts')
 const getFileNames = (readDirPath) => {
     let files = fs.readdirSync(readDirPath);
     return files.sort((a, b) => {
@@ -172,11 +172,6 @@ const getByteSizeForRepeatingGroupBitmap = (karma, ids, encType) => {
     // pad bitmap with zeroes
     bitmapStr = bitmapStr.padStart(bitmapBits, '0')
 
-    let res = compareBigInt(bitmap, bitmapStr)
-    if(!res) {
-        throw 'Bitmap not constructed correctly!'
-    }
-
     let bitmapBytes = bitmapBits / 8;
 
     let emptyBytes = numEmptyWords(bitmapStr);
@@ -199,12 +194,49 @@ const compareBigInt = (bigint, bitmapStr) => {
     return bigint === newBigInt
 }
 
-const numEmptyWords = (bitmapStr, wordSize= 8) => {
+
+const compressBitmap = (bitmapStr, wordSizeBits = 8) => {
+
+    let tmpId = 0;
+    let header = '';
+    let compressedBitmap = '';
+    let numEmptyBytes = 0;
+    while(tmpId !== bitmapStr.length) {
+        let byte = bitmapStr.slice(tmpId, tmpId + wordSizeBits)
+
+        let isEmpty = true;
+        for(let bit of byte) {
+            if (bit === '1') {
+                isEmpty = false;
+                break;
+            }
+        }
+
+        if (isEmpty) {
+            header = `${header}0`
+            numEmptyBytes++;
+        } else {
+            header = `${header}1`
+            compressedBitmap = `${compressedBitmap}${byte}`
+        }
+
+        tmpId += wordSizeBits
+    }
+
+    return {
+        header: header,
+        compressedBitmap: compressedBitmap,
+        numEmptyBytes: numEmptyBytes
+    }
+
+}
+
+const numEmptyWords = (bitmapStr, wordSizeBits= 8) => {
 
     let numEmptyBytes = 0;
     let tmpId = 0;
     while(tmpId !== bitmapStr.length) {
-        let byte = bitmapStr.slice(tmpId, tmpId + wordSize)
+        let byte = bitmapStr.slice(tmpId, tmpId + wordSizeBits)
 
         let isEmpty = true;
         for(let bit of byte) {
@@ -218,7 +250,7 @@ const numEmptyWords = (bitmapStr, wordSize= 8) => {
             numEmptyBytes++;
         }
 
-        tmpId += wordSize
+        tmpId += wordSizeBits
     }
 
     return numEmptyBytes;
@@ -252,28 +284,23 @@ const getBitmapStats = (karma, ids, encType) => {
 
     let bytes = bits / 8;
 
-    let emptyBytes = numEmptyWords(bitmapStr);
-    let nonEmptyBytes = bytes - emptyBytes;
-    let headerBytes = Math.ceil(bytes / 8);
+    let {header, compressedBitmap, numEmptyBytes} = compressBitmap(bitmapStr);
+
+
+    let nonEmptyBytes = bytes - numEmptyBytes;
+    let headerBytes = header.length;
     let totalBitmapBytes = headerBytes + nonEmptyBytes;
 
+
     let byteSize = getByteSize(karma, encType) + getByteSize(startId, encType) + getByteSize(range, encType) + getByteSize(headerBytes, encType) + totalBitmapBytes
-    let gasCost = byteSize * GAS_COST_BYTE;
 
     return {
         startId,
-        endId,
-        bits,
-        bytes,
         range,
-        emptyBytes,
-        nonEmptyBytes,
         headerBytes,
+        header,
+        compressedBitmap,
         byteSize,
-        gasCost,
-        items,
-        projectedItems,
-        bitmapStr,
         karma
     }
 

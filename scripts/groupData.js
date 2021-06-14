@@ -1,7 +1,7 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
 const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup, getByteSizeForRepeatingGroupBitmap, compareRepeatingGroupCosts} = require('./utils')
-const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps} = require('./consts')
+const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps, groupsBitKeys} = require('./consts')
 
 const groupByKarma = (data) => {
     const amountGroups = {};
@@ -184,7 +184,7 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
         if(addrsSm.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
             let addrId = addrsSm.pop();
-            let groupId = getBitGroupId(getBitGroupId([1, karmaSm, 1, 0, 1]));
+            let groupId = getBitGroupId([1, karmaSm, 1, 0, 1]);
             setGroupValue(data, groupId, addrId, karma);
         }
 
@@ -195,21 +195,17 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
             setGroupValue(data, groupId, addrId, karma);
         }
 
-        if(addrs.length > 3 && addrsMd.length && addrsSm.length) {
+        if((addrsSm.length + addrsMd.length) > 3) {
             let costsBitmasks = getByteSizeForRepeatingGroupBitmap(karma, addrs, 'native');
             let costsAddrSmall = getByteSizeForRepeatingGroup(karma, addrsSm, 'native');
-            if (costsBitmasks < costsAddrSmall) {
-                setAsRepeatingGroupedBitmap(data.repeatingGroupedBitmaps, karma, karmaSm, addrs)
+            let costsAddrMed = getByteSizeForRepeatingGroup(karma, addrsMd, 'native');
+            if(costsBitmasks < costsAddrMed + costsAddrSmall) {
+                setAsRepeatingGroupedBitmap(data, karma, karmaSm, addrs)
             } else {
-                let costsAddrMed = getByteSizeForRepeatingGroup(karma, addrsMd, 'native');
-                if(costsBitmasks < costsAddrMed) {
-                    setAsRepeatingGroupedBitmap(data.repeatingGroupedBitmaps, karma, karmaSm, addrs)
-                } else {
-                    setAsRepeatingGrouped(data.repeatingGrouped, karma, karmaSm, addrsSm, addrsMd)
-                }
+                setAsRepeatingGrouped(data, karma, karmaSm, addrsSm, addrsMd)
             }
         } else {
-            setAsRepeatingGrouped(data.repeatingGrouped, karma, karmaSm, addrsSm, addrsMd)
+            setAsRepeatingGrouped(data, karma, karmaSm, addrsSm, addrsMd)
         }
 
 
@@ -225,8 +221,11 @@ const getBitGroupId = (inputs) => {
         let inputBit = input ? '1' : '0';
         bitmask = `${bitmask}${inputBit}`
     }
-    if (bitmask.length < 8) {
-        bitmask = bitmask.padStart(8, "0");
+
+    bitmask = bitmask.padStart(8, "0");
+
+    if(bitmask === '11111111') {
+        console.log(inputs);
     }
 
     return bitmask;
@@ -260,7 +259,7 @@ const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, addrs) => {
 }
 
 
-const group = (data, encType='rlp', bitmaps= false) => {
+const group = (data, encType='rlp') => {
 
     let index = {};
     let groupedData = {};
@@ -273,10 +272,10 @@ const group = (data, encType='rlp', bitmaps= false) => {
 
         if(encType === 'rlp') {
             groupedData[fName] = {
-                '00000000': groupedNew.singles,
-                '00000010': groupedNew.groups,
-                '00000100': groupedRepeating.singles,
-                '00000110': groupedRepeating.groups
+                [groupsBitKeys.rlpSingleNew.bin]: groupedNew.singles,
+                [groupsBitKeys.rlpGroupNew.bin]: groupedNew.groups,
+                [groupsBitKeys.rlpSingleRepeat.bin]: groupedRepeating.singles,
+                [groupsBitKeys.rlpGroupRepeat.bin]: groupedRepeating.groups
             }
         } else if (encType === 'native') {
             groupedData[fName] = groupDataNative(groupedNew, groupedRepeating)
@@ -299,7 +298,7 @@ const groupData = (argv) => {
 
     const jsonData = readData(dataset, 'json');
 
-    console.log(`[${dataset}] Grouping data, enc type: [${encType}]...`);
+    console.log(`[${dataset}][${encType}] Grouping data...`);
 
     let groupedData = group(jsonData, encType);
 
@@ -312,7 +311,7 @@ const groupData = (argv) => {
 
     fs.writeFileSync(`${dataDirs.addrIndex}/${dataset}_${encType}_index.json`, JSON.stringify(groupedData.addrIndex))
 
-    console.log(`[${dataset}] Data grouped! Enc type: [${encType}]...`);
+    console.log(`[${dataset}][${encType}] Data grouped!`);
 
 };
 
@@ -320,3 +319,5 @@ const groupData = (argv) => {
 module.exports = {
     groupData
 }
+
+// groupData({dataset: 'bricks', encType: 'bitmap'})
