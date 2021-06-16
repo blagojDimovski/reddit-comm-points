@@ -1,7 +1,7 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup, getByteSizeForRepeatingGroupBitmap, compareRepeatingGroupCosts} = require('./utils')
-const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps, groupsBitKeys} = require('./consts')
+const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup} = require('./utils')
+const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps, getGroupBitKeys} = require('./consts')
 
 const groupByKarma = (data) => {
     const amountGroups = {};
@@ -196,11 +196,11 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
         }
 
         if((addrsSm.length + addrsMd.length) > 3) {
-            let costsBitmasks = getByteSizeForRepeatingGroupBitmap(karma, addrs, 'native');
+            let bitmapStats = getBitmapStats(karma, addrs, 'native');
             let costsAddrSmall = getByteSizeForRepeatingGroup(karma, addrsSm, 'native');
             let costsAddrMed = getByteSizeForRepeatingGroup(karma, addrsMd, 'native');
-            if(costsBitmasks < costsAddrMed + costsAddrSmall) {
-                setAsRepeatingGroupedBitmap(data, karma, karmaSm, addrs)
+            if(bitmapStats.byteSize < costsAddrMed + costsAddrSmall) {
+                setAsRepeatingGroupedBitmap(data, karma, karmaSm, bitmapStats)
             } else {
                 setAsRepeatingGrouped(data, karma, karmaSm, addrsSm, addrsMd)
             }
@@ -248,8 +248,7 @@ const setAsRepeatingGrouped = (data, karma, karmaSm, addrsSm, addrsMd) => {
 }
 
 
-const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, addrs) => {
-    let bitmapStats = getBitmapStats(karma, addrs, 'native');
+const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, bitmapStats) => {
     let startIdSm = isSmallNum(bitmapStats.startId);
     let rangeSm = isSmallNum(bitmapStats.range);
     let headerSm = isSmallNum(bitmapStats.headerBytes)
@@ -263,6 +262,7 @@ const group = (data, encType='rlp') => {
 
     let index = {};
     let groupedData = {};
+    let groupsBitKeys = getGroupBitKeys()
     for (let fName in data) {
         let fData  = data[fName];
 
@@ -282,6 +282,7 @@ const group = (data, encType='rlp') => {
         } else {
             groupedData[fName] = groupDataBitmaps(groupedNew, groupedRepeating)
         }
+        console.log(`grouped ${fName}`)
 
     }
 

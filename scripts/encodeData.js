@@ -198,16 +198,18 @@ const encodeData = (argv) => {
     const dataset = argv.dataset;
     const encType = argv.encType;
 
-    console.log(`[${dataset}] Encoding data, enc type: [${encType}]...`);
+    console.log(`[${dataset}][${encType}] Encoding data...`);
 
     const groupedData = readData(dataset, 'grouped',encType);
     let encodedData = encode(groupedData)
 
     writeData(encodedData, dataset, 'encoded', encType);
 
-    console.log(`[${dataset}] Data encoded! Enc type: [${encType}]...`);
+    console.log(`[${dataset}][${encType}] Data encoded!`);
 
 }
+
+// encodeData({dataset: 'bricks', encType: 'bitmap'})
 
 module.exports = {
     encodeData

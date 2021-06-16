@@ -148,51 +148,6 @@ const getByteSizeForRepeatingGroup = (karma, ids, encType) => {
 
 }
 
-const getByteSizeForRepeatingGroupBitmap = (karma, ids, encType) => {
-    let items = ids.slice();
-    items.sort((a, b) => {
-        return a - b;
-    })
-
-    let startIndex = items[0]
-    let endIndex = items[items.length - 1];
-    let bitmapRange = endIndex - startIndex;
-    let projectedItems = items.map(item => item - startIndex)
-    let bitmap = BigInt(0)
-
-    for (let item of projectedItems) {
-        bitmap = bitmap | (BigInt(1) << BigInt(item));
-    }
-    let bitsRemaining = 8 - (bitmapRange % 8)
-    let bitmapBits = bitsRemaining + bitmapRange;
-
-
-    let bitmapStr = bitmap.toString(2);
-
-    // pad bitmap with zeroes
-    bitmapStr = bitmapStr.padStart(bitmapBits, '0')
-
-    let bitmapBytes = bitmapBits / 8;
-
-    let emptyBytes = numEmptyWords(bitmapStr);
-    let nonEmptyBytes = bitmapBytes - emptyBytes;
-    let headerBytes = Math.ceil(bitmapBytes / 8);
-    let totalBitmapBytes = headerBytes + nonEmptyBytes;
-
-    return getByteSize(karma, encType) + getByteSize(startIndex, encType) + getByteSize(bitmapRange, encType) + getByteSize(headerBytes, encType) + totalBitmapBytes
-
-}
-
-
-const compareRepeatingGroupCosts = (karma, ids, encType) => {
-    return getByteSizeForRepeatingGroup(karma, ids, encType) >= getByteSizeForRepeatingGroupBitmap(karma, ids, encType) ? 1 : 2
-}
-
-
-const compareBigInt = (bigint, bitmapStr) => {
-    let newBigInt = BigInt(`0b${bitmapStr}`)
-    return bigint === newBigInt
-}
 
 
 const compressBitmap = (bitmapStr, wordSizeBits = 8) => {
@@ -200,7 +155,8 @@ const compressBitmap = (bitmapStr, wordSizeBits = 8) => {
     let tmpId = 0;
     let header = '';
     let compressedBitmap = '';
-    let numEmptyBytes = 0;
+    let emptyBytes = 0;
+    let nonEmptyBytes = 0;
     while(tmpId !== bitmapStr.length) {
         let byte = bitmapStr.slice(tmpId, tmpId + wordSizeBits)
 
@@ -214,46 +170,32 @@ const compressBitmap = (bitmapStr, wordSizeBits = 8) => {
 
         if (isEmpty) {
             header = `${header}0`
-            numEmptyBytes++;
+            emptyBytes++;
         } else {
             header = `${header}1`
             compressedBitmap = `${compressedBitmap}${byte}`
+            nonEmptyBytes++;
         }
 
         tmpId += wordSizeBits
+    }
+
+
+    let mod = header.length % wordSizeBits
+    let rawBitmap = bitmapStr;
+    if(mod !== 0) {
+        let headerBitsRemaining = wordSizeBits - mod;
+        header = header.padStart(header.length + headerBitsRemaining, '0');
+        rawBitmap = rawBitmap.padStart(rawBitmap.length + (headerBitsRemaining) * 8, '0');
     }
 
     return {
-        header: header,
-        compressedBitmap: compressedBitmap,
-        numEmptyBytes: numEmptyBytes
+        header,
+        rawBitmap,
+        compressedBitmap,
+        emptyBytes,
+        nonEmptyBytes
     }
-
-}
-
-const numEmptyWords = (bitmapStr, wordSizeBits= 8) => {
-
-    let numEmptyBytes = 0;
-    let tmpId = 0;
-    while(tmpId !== bitmapStr.length) {
-        let byte = bitmapStr.slice(tmpId, tmpId + wordSizeBits)
-
-        let isEmpty = true;
-        for(let bit of byte) {
-            if (bit === '1') {
-                isEmpty = false;
-                break;
-            }
-        }
-
-        if (isEmpty) {
-            numEmptyBytes++;
-        }
-
-        tmpId += wordSizeBits
-    }
-
-    return numEmptyBytes;
 
 }
 
@@ -266,31 +208,31 @@ const getBitmapStats = (karma, ids, encType) => {
 
     let startId = items[0]
     let endId = items[items.length - 1];
-    let range = endId - startId;
+    let range = (endId - startId) + 1;
     let projectedItems = items.map(item => item - startId)
     let bitmap = BigInt(0)
 
     for (let item of projectedItems) {
         bitmap = bitmap | (BigInt(1) << BigInt(item));
     }
-    let bitsRemaining = 8 - (range % 8)
-    let bits = bitsRemaining + range;
+
+    let mod = range % 8;
+    let bits = range;
+    if(mod !== 0) {
+        let bitsRemaining = 8 - mod;
+        bits += bitsRemaining;
+    }
 
 
-    let bitmapStr = bitmap.toString(2);
+    let rawBitmap = bitmap.toString(2);
 
     // pad bitmap with zeroes
-    bitmapStr = bitmapStr.padStart(bits, '0')
+    rawBitmap = rawBitmap.padStart(bits, '0')
 
-    let bytes = bits / 8;
+    let compressRes = compressBitmap(rawBitmap);
 
-    let {header, compressedBitmap, numEmptyBytes} = compressBitmap(bitmapStr);
-
-
-    let nonEmptyBytes = bytes - numEmptyBytes;
-    let headerBytes = header.length;
-    let totalBitmapBytes = headerBytes + nonEmptyBytes;
-
+    let headerBytes = compressRes.header.length / 8
+    let totalBitmapBytes = headerBytes + compressRes.nonEmptyBytes;
 
     let byteSize = getByteSize(karma, encType) + getByteSize(startId, encType) + getByteSize(range, encType) + getByteSize(headerBytes, encType) + totalBitmapBytes
 
@@ -298,8 +240,9 @@ const getBitmapStats = (karma, ids, encType) => {
         startId,
         range,
         headerBytes,
-        header,
-        compressedBitmap,
+        header: compressRes.header,
+        rawBitmap: compressRes.rawBitmap,
+        compressedBitmap: compressRes.compressedBitmap,
         byteSize,
         karma
     }
@@ -308,8 +251,6 @@ const getBitmapStats = (karma, ids, encType) => {
 
 module.exports = {
     getByteSizeForRepeatingGroup,
-    getByteSizeForRepeatingGroupBitmap,
-    compareRepeatingGroupCosts,
     getBitmapStats,
     getFileNames,
     readData,

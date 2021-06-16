@@ -3,37 +3,49 @@ const {dataDirs, getStatsTemplateRlp, getStatsTemplateNativeWithCosts,
     ADDR_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE} = require('./consts')
 const {getByteSize, readData, readFromFile, writeToFile} = require('./utils')
 
-const getStatsCompressedRlp = (data) => {
+const getStatsCompressed = (data) => {
 
     const stats = {
-        global: getStatsTemplateRlp(),
+        global: {
+            byteSizes: {
+                total: 0
+            },
+            gasCosts: {
+                total: 0
+            }
+        },
         dists: {}
     }
 
     for(let fName in data) {
         let fData = data[fName];
 
-        let distStats = getStatsTemplateRlp();
-        distStats.byteSizes.newSingles = Buffer.byteLength(fData.newSingles);
-        distStats.byteSizes.newGrouped = Buffer.byteLength(fData.newGrouped);
-        distStats.byteSizes.repeatingSingles = Buffer.byteLength(fData.repeatingSingles);
-        distStats.byteSizes.repeatingGrouped = Buffer.byteLength(fData.repeatingGrouped);
-        distStats.byteSizes.repeatingSingles = distStats.byteSizes.repeatingSingles > 1 ? distStats.byteSizes.repeatingSingles : 0;
-        distStats.byteSizes.repeatingGrouped = distStats.byteSizes.repeatingGrouped > 1 ? distStats.byteSizes.repeatingGrouped : 0;
+        let distStats = {
+            byteSizes: {
+                total: 0
+            },
+            gasCosts: {
+                total: 0
+            }
+        };
 
-        for(let k in distStats.byteSizes) {
-            if(k === 'total') continue;
-            distStats.gasCosts[k] = distStats.byteSizes[k] * GAS_COST_BYTE
-            distStats.byteSizes.total += distStats.byteSizes[k]
-            distStats.gasCosts.total += distStats.gasCosts[k]
+        for (let key in fData) {
+            let encodedData = fData[key]
+            distStats.byteSizes[key] = Buffer.byteLength(encodedData);
+            distStats.gasCosts[key] = distStats.byteSizes[key] * GAS_COST_BYTE
 
-            stats.global.byteSizes[k] += distStats.byteSizes[k]
-            stats.global.gasCosts[k] += distStats.gasCosts[k]
+            distStats.byteSizes.total += distStats.byteSizes[key]
+            distStats.gasCosts.total += distStats.gasCosts[key]
 
-            stats.global.byteSizes.total += distStats.byteSizes[k]
-            stats.global.gasCosts.total += distStats.gasCosts[k]
+            stats.global.byteSizes[key] += distStats.byteSizes[key]
+            stats.global.gasCosts[key] += distStats.gasCosts[key]
+
+            stats.global.byteSizes.total += distStats.byteSizes[key]
+            stats.global.gasCosts.total += distStats.gasCosts[key]
 
         }
+
+
         stats.dists[fName] = distStats
 
     }
@@ -42,73 +54,6 @@ const getStatsCompressedRlp = (data) => {
 
 };
 
-const calculateStatsRecursive = (data, byteSizes, gasCosts) => {
-
-    let totalGasCost = 0;
-    let totalByteSize = 0;
-
-    for (let key in data) {
-        if (data[key] instanceof Buffer || data[key] instanceof Uint8Array) {
-            byteSizes[key] = Buffer.byteLength(data[key])
-            gasCosts[key] = byteSizes[key] * GAS_COST_BYTE
-            totalByteSize += byteSizes[key]
-            totalGasCost += gasCosts[key]
-        } else if(data[key] instanceof Object) {
-            let res = calculateStatsRecursive(data[key], byteSizes[key], gasCosts[key])
-            totalGasCost += res.totalGasCost;
-            totalByteSize += res.totalByteSize;
-        }
-    }
-
-    return {totalGasCost, totalByteSize}
-
-}
-
-
-
-const updateGlobalRecursive = (distStats, globalStats) => {
-
-    for(key in distStats) {
-        if (distStats[key] instanceof Object) {
-            updateGlobalRecursive(distStats[key], globalStats[key]);
-        } else {
-            if(globalStats[key] instanceof Object) {
-                globalStats[key] = distStats[key]
-            } else {
-                globalStats[key] += distStats[key];
-            }
-        }
-    }
-
-}
-
-const getStatsCompressedNative = (data) => {
-
-    const stats = {
-        global: getStatsTemplateNativeWithCosts(),
-        dists: {}
-    }
-
-    for(let fName in data) {
-        let fData = data[fName];
-
-        let distStats = getStatsTemplateNativeWithCosts();
-
-
-        let res = calculateStatsRecursive(fData, distStats.byteSizes, distStats.gasCosts);
-        distStats.byteSizes.total = res.totalByteSize;
-        distStats.gasCosts.total = res.totalGasCost;
-
-        updateGlobalRecursive(distStats, stats.global)
-
-        stats.dists[fName] = distStats;
-
-
-    }
-
-    return stats;
-
-};
 
 
 
@@ -266,7 +211,7 @@ const computeStats = (argv) => {
     }
 
     if(argv.naive) {
-        console.log(`[${dataset}] Calculating naive gas costs, enc type: [${encType}]...`)
+        console.log(`[${dataset}][${encType}] Calculating naive gas costs...`)
         let naiveGasCosts;
         let naiveGasCostsPath = `${statsDir}/naiveGasCosts.json`;
         if(argv.cache) {
@@ -281,14 +226,14 @@ const computeStats = (argv) => {
     }
 
     if(argv.compressed) {
-        console.log(`[${dataset}] Calculating compressed gas costs, enc type: [${encType}]...`)
+        console.log(`[${dataset}][${encType}] Calculating compressed gas costs...`)
         let compressedGasCosts;
         let compressedGasCostsPath = `${statsDir}/compressedGasCosts.json`;
 
         if(argv.cache) {
             compressedGasCosts = readFromFile(compressedGasCostsPath);
         } else {
-            compressedGasCosts = encType === 'rlp' ? getStatsCompressedRlp(encodedData) : getStatsCompressedNative(encodedData)
+            compressedGasCosts = getStatsCompressed(encodedData)
             writeToFile(compressedGasCostsPath, compressedGasCosts)
         }
         costsObj['compressed'] = compressedGasCosts
@@ -297,7 +242,7 @@ const computeStats = (argv) => {
 
     let savingStats = compareGasCosts(costsObj);
     writeToFile(`${statsDir}/savings.json`, savingStats)
-    console.log(`[${dataset}] Savings calculated and written to file, enc type: [${encType}]`);
+    console.log(`[${dataset}][${encType}] Savings calculated and written to file!`);
 }
 
 

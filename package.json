@@ -42,6 +42,7 @@
     "initContractLib": "hardhat run scripts/initContractsLib.js",
     "decodeData": "node scripts/decodeData.js",
     "encodeData": "node scripts/encodeData.js",
+    "verifyData": "node scripts/verifyEncoding.js",
     "benchmarkCosts": "node scripts/benchmarkCosts.js",
     "convertData": "node scripts/convertData.js",
     "groupData": "node scripts/groupData.js",
