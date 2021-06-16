@@ -1,5 +1,5 @@
 const fs = require("fs");
-const {dataDirs, RLP_MULTI_DIGIT_BYTES, RLP_SINGLE_DIGIT_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE} = require('./consts')
+const {dataDirs, RLP_MULTI_DIGIT_BYTES, RLP_SINGLE_DIGIT_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE, BITMAP_CLUSTER_GAP_SIZES} = require('./consts')
 const getFileNames = (readDirPath) => {
     let files = fs.readdirSync(readDirPath);
     return files.sort((a, b) => {
@@ -199,12 +199,167 @@ const compressBitmap = (bitmapStr, wordSizeBits = 8) => {
 
 }
 
+
+const groupAddresses = (addrs) => {
+    let addrsSm = [];
+    let addrsMd = []
+
+    for (let addr of addrs) {
+        if(isSmallNum(addr)) {
+            addrsSm.push(addr);
+        } else {
+            addrsMd.push(addr);
+        }
+    }
+    return {
+        addrsSm,
+        addrsMd
+    }
+}
+
+const getBitmapStatsClusters = (karma, ids, encType='native') => {
+    let items = ids.slice();
+    let karmaBytes = getByteSize(karma, encType);
+    items.sort((a, b) => {
+        return a - b;
+    })
+
+    let bitmapByteSize = calculateBitmapStats(karma, items, encType).byteSize;
+
+    let addrGroup = groupAddresses(items);
+    let addrSmByteSize = getByteSizeForRepeatingGroup(karma, addrGroup.addrsSm, encType);
+    let addrMdByteSize = getByteSizeForRepeatingGroup(karma, addrGroup.addrsMd, encType);
+    let nativeByteSize = addrSmByteSize + addrMdByteSize;
+
+    let bitmapGasCost = bitmapByteSize * GAS_COST_BYTE;
+    let nativeGasCost = nativeByteSize * GAS_COST_BYTE;
+
+
+    let clustersPerGapSize = {
+
+    };
+
+    let gasCostMin = Number.MAX_SAFE_INTEGER;
+    let gasCostMinGapSize = 8;
+
+    for(let gapSize of BITMAP_CLUSTER_GAP_SIZES) {
+        let clusters = {};
+
+        let clusterId = 0;
+        let minClusterItems = items.length;
+        let maxClusterItems = 0;
+
+        let byteSize = 0;
+        let gasCost = 0;
+        let numClusters = 0;
+        let clusteredAddresses = 0;
+        let smallClusters = 0;
+        let gasSavedOverNative = 0;
+        let gasSavedOverBitmaps = 0;
+
+        let prevItem = items[0];
+        clusters[clusterId] = {items: [prevItem], stats: {byteSize: 0}};
+        let unclusteredItems = [];
+        for(let item of items.slice(1)) {
+            if ((item - prevItem) >= gapSize) {
+                // previous cluster stats
+                let itemsPrevCluster = clusters[clusterId].items;
+                if(itemsPrevCluster.length > maxClusterItems) {
+                    maxClusterItems = itemsPrevCluster.length;
+                }
+
+                if (itemsPrevCluster.length < minClusterItems) {
+                    minClusterItems = itemsPrevCluster.length;
+                }
+
+
+                if(itemsPrevCluster.length > 3) {
+                    clusters[clusterId].stats = calculateBitmapStats(karma, itemsPrevCluster, encType);
+                    numClusters++;
+                    clusteredAddresses += itemsPrevCluster.length;
+                    byteSize += clusters[clusterId].stats.byteSize;
+                    clusterId++;
+                } else {
+                    let {addrsSm, addrsMd} = groupAddresses(itemsPrevCluster);
+
+
+                    if(addrsSm.length === 1) {
+                        byteSize += (1 + karmaBytes)
+                    } else if(addrsSm.length >  1) {
+                        let addrsSmLenBytes = getByteSize(addrsSm.length, encType)
+                        byteSize += (karmaBytes + addrsSmLenBytes + addrsSm.length)
+                    }
+
+                    if(addrsMd.length === 1) {
+                        byteSize += (1 + karmaBytes)
+                    } else if(addrsMd.length >  1) {
+                        let addrsMdLenBytes = getByteSize(addrsMd.length, encType)
+                        byteSize += (karmaBytes + addrsMdLenBytes + addrsMd.length)
+                    }
+
+                    smallClusters++;
+                    delete clusters[clusterId];
+
+                }
+
+                // create new cluster
+                clusters[clusterId] = {items: [item], stats: {byteSize: 0}};
+            } else {
+                clusters[clusterId].items.push(item);
+            }
+
+            prevItem = item;
+
+        }
+        gasCost = byteSize * GAS_COST_BYTE;
+        gasSavedOverBitmaps = bitmapGasCost - gasCost;
+        gasSavedOverNative = nativeGasCost - gasCost;
+
+        if(gasCost < gasCostMin) {
+            gasCostMin = gasCost;
+            gasCostMinGapSize = gapSize
+        }
+
+        clustersPerGapSize[gapSize] = {
+            clusters: clusters,
+            numClusters: numClusters,
+            smallClusters: smallClusters,
+            minClusterItems: minClusterItems,
+            maxClusterItems: maxClusterItems,
+            byteSize: byteSize,
+            gasCost: gasCost,
+            clusteredAddresses: clusteredAddresses,
+            gasSavedOverNative: gasSavedOverNative,
+            gasSavedOverBitmaps: gasSavedOverBitmaps
+        };
+
+    }
+
+
+    return {
+        clustersPerGapSize: clustersPerGapSize,
+        bitmapGasCost: bitmapGasCost,
+        nativeGasCost: nativeGasCost,
+        gasCostMin: gasCostMin,
+        gasCostMinGapSize: gasCostMinGapSize
+    };
+}
+
+
 const getBitmapStats = (karma, ids, encType) => {
 
     let items = ids.slice();
     items.sort((a, b) => {
         return a - b;
     })
+
+    return calculateBitmapStats(karma, items, encType)
+
+}
+
+
+const calculateBitmapStats = (karma, items, encType) => {
+
 
     let startId = items[0]
     let endId = items[items.length - 1];
@@ -249,14 +404,22 @@ const getBitmapStats = (karma, ids, encType) => {
 
 }
 
+const isSmallNum = (num) => {
+    return parseInt(num) <= 255;
+}
+
+
 module.exports = {
     getByteSizeForRepeatingGroup,
     getBitmapStats,
+    getBitmapStatsClusters,
     getFileNames,
     readData,
     writeData,
     readFromFile,
     writeToFile,
     stringifyBigIntReplacer,
-    getByteSize
+    getByteSize,
+    isSmallNum,
+    groupAddresses
 }

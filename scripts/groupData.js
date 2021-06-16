@@ -1,6 +1,6 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup} = require('./utils')
+const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup, getBitmapStatsClusters, isSmallNum, groupAddresses} = require('./utils')
 const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps, getGroupBitKeys} = require('./consts')
 
 const groupByKarma = (data) => {
@@ -57,9 +57,6 @@ const filterNewAndRepeatingItems = (data, index) => {
 
 }
 
-const isSmallNum = (num) => {
-    return parseInt(num) <= 255;
-}
 
 
 const setGroupValue = (data, groupId, key, value) => {
@@ -170,16 +167,8 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
     for (let karma in dataRepeating.groups) {
         let addrs = dataRepeating.groups[karma];
         let karmaSm = isSmallNum(karma);
-        let addrsSm = [];
-        let addrsMd = []
+        let {addrsSm, addrsMd} = groupAddresses(addrs);
 
-        for (let addr of addrs) {
-            if(isSmallNum(addr)) {
-                addrsSm.push(addr);
-            } else {
-                addrsMd.push(addr);
-            }
-        }
 
         if(addrsSm.length === 1) {
             // it is cheaper to classify this entity as repeated single rather than group
@@ -213,6 +202,25 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
 
     return data;
 
+}
+
+
+const testGroupDataBitmapsClustered = (dataNew, dataRepeating) => {
+    const data = {repeating: {}, totalGasCost: 0}
+    //
+    // groupNewSingles(data, dataNew.singles);
+    // groupNewGroups(data, dataNew.groups);
+    // groupRepeatingSingles(data, dataRepeating.singles)
+    //
+
+    for (let karma in dataRepeating.groups) {
+        let addrs = dataRepeating.groups[karma];
+        data['repeating'][karma] = getBitmapStatsClusters(karma, addrs, 'native');
+        data['repeating']['totalGasCost'] += data['repeating'][karma].gasCostMin;
+
+    }
+
+    return data;
 }
 
 const getBitGroupId = (inputs) => {
@@ -261,7 +269,7 @@ const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, bitmapStats) => {
 const group = (data, encType='rlp') => {
 
     let index = {};
-    let groupedData = {};
+    let grouped = {};
     let groupsBitKeys = getGroupBitKeys()
     for (let fName in data) {
         let fData  = data[fName];
@@ -271,23 +279,25 @@ const group = (data, encType='rlp') => {
         const groupedRepeating = groupByKarma(repeatingItems);
 
         if(encType === 'rlp') {
-            groupedData[fName] = {
+            grouped[fName] = {
                 [groupsBitKeys.rlpSingleNew.bin]: groupedNew.singles,
                 [groupsBitKeys.rlpGroupNew.bin]: groupedNew.groups,
                 [groupsBitKeys.rlpSingleRepeat.bin]: groupedRepeating.singles,
                 [groupsBitKeys.rlpGroupRepeat.bin]: groupedRepeating.groups
             }
         } else if (encType === 'native') {
-            groupedData[fName] = groupDataNative(groupedNew, groupedRepeating)
+            grouped[fName] = groupDataNative(groupedNew, groupedRepeating)
+        } else if (encType === 'bitmap') {
+            grouped[fName] = groupDataBitmaps(groupedNew, groupedRepeating)
         } else {
-            groupedData[fName] = groupDataBitmaps(groupedNew, groupedRepeating)
+            grouped[fName] = testGroupDataBitmapsClustered(groupedNew, groupedRepeating)
         }
         console.log(`grouped ${fName}`)
 
     }
 
     return {
-        data: groupedData,
+        data: grouped,
         addrIndex: index
     }
 
@@ -321,4 +331,4 @@ module.exports = {
     groupData
 }
 
-// groupData({dataset: 'bricks', encType: 'bitmap'})
+// groupData({dataset: 'bricks', encType: 'bitmapCluster'})

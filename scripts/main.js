@@ -75,7 +75,7 @@ const argv = yargs
         alias: 'encType',
         description: 'the number encoding type',
         type: 'string',
-        choices: ['rlp', 'native', 'bitmap'],
+        choices: ['rlp', 'native', 'bitmap', 'bitmapCluster'],
         default: 'rlp'
     })
     .option('dataset', {

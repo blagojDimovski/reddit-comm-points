@@ -44,6 +44,8 @@ const nativeTemplate = {
     repeatingGrouped: {}
 }
 
+const BITMAP_CLUSTER_GAP_SIZES = [8, 16, 24, 32]
+
 const getNativeTemplateWithBitmaps = () => {
 
     return JSON.parse(JSON.stringify({...nativeTemplate, repeatingGroupedBitmaps: {}}))
@@ -212,5 +214,6 @@ module.exports = {
     BITMASK_BYTES,
     SMALL_BYTES,
     MED_BYTES,
-    GAS_COST_BYTE
+    GAS_COST_BYTE,
+    BITMAP_CLUSTER_GAP_SIZES
 }
