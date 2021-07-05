@@ -175,6 +175,9 @@ const getStatsNaive = (fileData, encType='rlp') => {
             byteSize += getByteSize(item.karma, encType);
             byteSize += ADDR_BYTES;
         }
+
+        byteSize += encType !== 'rlp' ? 2 : 1; // this is for the batch type, we will need two groups if the encoding is not rlp and 1 group if it is rlp
+
         stats.dists[fName] = {
             gasCosts: {
                 total: byteSize * GAS_COST_BYTE

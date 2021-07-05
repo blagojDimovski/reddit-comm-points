@@ -121,9 +121,15 @@ const stringifyBigIntReplacer = (key, value) => {
     return typeof value === 'bigint' ? value.toString(2) : value;
 };
 
-const writeToFile = (filePath, obj) => {
+const writeToFile = (filePath, obj, stringify=true) => {
 
-    fs.writeFileSync(filePath, JSON.stringify(obj, stringifyBigIntReplacer))
+    let data = obj;
+
+    if(stringify) {
+        data = JSON.stringify(obj, stringifyBigIntReplacer)
+    }
+
+    fs.writeFileSync(filePath, data)
 
 }
 
@@ -227,22 +233,40 @@ const getBitmapStatsClusters = (karma, ids, encType='native') => {
     let bitmapByteSize = calculateBitmapStats(karma, items, encType).byteSize;
 
     let addrGroup = groupAddresses(items);
-    let addrSmByteSize = getByteSizeForRepeatingGroup(karma, addrGroup.addrsSm, encType);
-    let addrMdByteSize = getByteSizeForRepeatingGroup(karma, addrGroup.addrsMd, encType);
+
+    let addrSmByteSize = 0;
+    if(addrGroup.addrsSm.length === 1) {
+        addrSmByteSize = 1 + karmaBytes // 1 byte for addr sm + the amount bytes
+    } else if(addrGroup.addrsSm.length >  1) {
+        addrSmByteSize = getByteSizeForRepeatingGroup(karma, addrGroup.addrsSm, encType);
+    }
+
+    let addrMdByteSize = 0;
+    if(addrGroup.addrsMd.length === 1) {
+        addrMdByteSize = 2 + karmaBytes // 2 bytes for addr md + the amount bytes
+    } else if(addrGroup.addrsMd.length >  1) {
+        addrMdByteSize = getByteSizeForRepeatingGroup(karma, addrGroup.addrsMd, encType);
+    }
+
     let nativeByteSize = addrSmByteSize + addrMdByteSize;
 
-    let bitmapGasCost = bitmapByteSize * GAS_COST_BYTE;
     let nativeGasCost = nativeByteSize * GAS_COST_BYTE;
+    let bitmapGasCost = bitmapByteSize * GAS_COST_BYTE;
 
+    // bitmap strategy works in a hybrid way (it fallback to native when native yields better results)
+    if(nativeGasCost < bitmapGasCost) {
+        bitmapGasCost = nativeGasCost;
+    }
 
     let clustersPerGapSize = {
 
     };
 
     let gasCostMin = Number.MAX_SAFE_INTEGER;
+    let hybridGasCostMin = Number.MAX_SAFE_INTEGER;
     let gasCostMinGapSize = 8;
 
-    for(let gapSize of BITMAP_CLUSTER_GAP_SIZES) {
+    for(let gapSize of  BITMAP_CLUSTER_GAP_SIZES) {
         let clusters = {};
 
         let clusterId = 0;
@@ -259,65 +283,54 @@ const getBitmapStatsClusters = (karma, ids, encType='native') => {
 
         let prevItem = items[0];
         clusters[clusterId] = {items: [prevItem], stats: {byteSize: 0}};
-        let unclusteredItems = [];
+        let unclusteredAddresses = [];
         for(let item of items.slice(1)) {
-            if ((item - prevItem) >= gapSize) {
-                // previous cluster stats
-                let itemsPrevCluster = clusters[clusterId].items;
-                if(itemsPrevCluster.length > maxClusterItems) {
-                    maxClusterItems = itemsPrevCluster.length;
-                }
-
-                if (itemsPrevCluster.length < minClusterItems) {
-                    minClusterItems = itemsPrevCluster.length;
-                }
-
-
-                if(itemsPrevCluster.length > 3) {
-                    clusters[clusterId].stats = calculateBitmapStats(karma, itemsPrevCluster, encType);
-                    numClusters++;
-                    clusteredAddresses += itemsPrevCluster.length;
-                    byteSize += clusters[clusterId].stats.byteSize;
-                    clusterId++;
-                } else {
-                    let {addrsSm, addrsMd} = groupAddresses(itemsPrevCluster);
-
-
-                    if(addrsSm.length === 1) {
-                        byteSize += (1 + karmaBytes)
-                    } else if(addrsSm.length >  1) {
-                        let addrsSmLenBytes = getByteSize(addrsSm.length, encType)
-                        byteSize += (karmaBytes + addrsSmLenBytes + addrsSm.length)
-                    }
-
-                    if(addrsMd.length === 1) {
-                        byteSize += (1 + karmaBytes)
-                    } else if(addrsMd.length >  1) {
-                        let addrsMdLenBytes = getByteSize(addrsMd.length, encType)
-                        byteSize += (karmaBytes + addrsMdLenBytes + addrsMd.length)
-                    }
-
-                    smallClusters++;
-                    delete clusters[clusterId];
-
-                }
-
+            if (((item - prevItem) >= gapSize)) {
+                ({clusterId, numClusters, smallClusters, minClusterItems, maxClusterItems, clusteredAddresses, byteSize, unclusteredAddresses} = setInCluster({clusters, clusterId, karma, encType, numClusters, smallClusters, clusteredAddresses, byteSize, minClusterItems, maxClusterItems, unclusteredAddresses}))
                 // create new cluster
                 clusters[clusterId] = {items: [item], stats: {byteSize: 0}};
             } else {
                 clusters[clusterId].items.push(item);
             }
-
             prevItem = item;
-
         }
+
+        // handle the last item
+        ({clusterId, numClusters, smallClusters, minClusterItems, maxClusterItems, clusteredAddresses, byteSize, unclusteredAddresses} = setInCluster({clusters, clusterId, karma, encType, numClusters, smallClusters, clusteredAddresses, byteSize, minClusterItems, maxClusterItems, unclusteredAddresses}))
+
+        let unclusteredGroup = groupAddresses(unclusteredAddresses);
+
+        let unclusteredSm = 0;
+        if(unclusteredGroup.addrsSm.length === 1) {
+            unclusteredSm = 1 + karmaBytes // 1 byte for addr sm + the amount bytes
+        } else if(unclusteredGroup.addrsSm.length >  1) {
+            unclusteredSm = getByteSizeForRepeatingGroup(karma, unclusteredGroup.addrsSm, encType);
+        }
+
+        let unclusteredMd = 0;
+        if(unclusteredGroup.addrsMd.length === 1) {
+            unclusteredMd = 2 + karmaBytes // 2 bytes for addr md + the amount bytes
+        } else if(unclusteredGroup.addrsMd.length >  1) {
+            unclusteredMd = getByteSizeForRepeatingGroup(karma, unclusteredGroup.addrsMd, encType);
+        }
+
+        byteSize += (unclusteredMd + unclusteredSm)
+
         gasCost = byteSize * GAS_COST_BYTE;
         gasSavedOverBitmaps = bitmapGasCost - gasCost;
         gasSavedOverNative = nativeGasCost - gasCost;
 
+        let costs = [gasCost, bitmapGasCost, nativeGasCost];
+        let hybridGasCost = Math.min(...costs);
+
+
         if(gasCost < gasCostMin) {
             gasCostMin = gasCost;
             gasCostMinGapSize = gapSize
+        }
+
+        if(hybridGasCost < hybridGasCostMin) {
+            hybridGasCostMin = hybridGasCost;
         }
 
         clustersPerGapSize[gapSize] = {
@@ -328,6 +341,7 @@ const getBitmapStatsClusters = (karma, ids, encType='native') => {
             maxClusterItems: maxClusterItems,
             byteSize: byteSize,
             gasCost: gasCost,
+            hybridGasCost: hybridGasCost,
             clusteredAddresses: clusteredAddresses,
             gasSavedOverNative: gasSavedOverNative,
             gasSavedOverBitmaps: gasSavedOverBitmaps
@@ -341,8 +355,44 @@ const getBitmapStatsClusters = (karma, ids, encType='native') => {
         bitmapGasCost: bitmapGasCost,
         nativeGasCost: nativeGasCost,
         gasCostMin: gasCostMin,
+        hybridGasCostMin: hybridGasCostMin,
         gasCostMinGapSize: gasCostMinGapSize
     };
+}
+
+
+const setInCluster = (params) => {
+    let {clusters, clusterId, karma, encType, numClusters, smallClusters, clusteredAddresses, byteSize, minClusterItems, maxClusterItems, unclusteredAddresses} = params;
+    // previous cluster stats
+    let itemsPrevCluster = clusters[clusterId].items;
+    if(itemsPrevCluster.length > maxClusterItems) {
+        maxClusterItems = itemsPrevCluster.length;
+    }
+
+    if (itemsPrevCluster.length < minClusterItems) {
+        minClusterItems = itemsPrevCluster.length;
+    }
+
+
+    if(itemsPrevCluster.length > 3) {
+        let stats = calculateBitmapStats(karma, itemsPrevCluster, encType);
+        clusters[clusterId].stats = {
+          byteSize: stats.byteSize,
+          numItems: itemsPrevCluster.length
+        };
+        numClusters++;
+        clusteredAddresses += itemsPrevCluster.length;
+        byteSize += clusters[clusterId].stats.byteSize;
+        delete clusters[clusterId].items;
+        clusterId++;
+    } else {
+        unclusteredAddresses = unclusteredAddresses.concat(itemsPrevCluster)
+        smallClusters++;
+        delete clusters[clusterId];
+
+    }
+
+    return {clusterId, numClusters, smallClusters, minClusterItems, maxClusterItems, clusteredAddresses, byteSize, unclusteredAddresses}
 }
 
 
@@ -352,6 +402,8 @@ const getBitmapStats = (karma, ids, encType) => {
     items.sort((a, b) => {
         return a - b;
     })
+
+    console.log("sorted items", items.slice(0,5), items.slice(items.length - 5));
 
     return calculateBitmapStats(karma, items, encType)
 
@@ -365,6 +417,7 @@ const calculateBitmapStats = (karma, items, encType) => {
     let endId = items[items.length - 1];
     let range = (endId - startId) + 1;
     let projectedItems = items.map(item => item - startId)
+    console.log("projected items", projectedItems.slice(0,5), projectedItems.slice(projectedItems.length - 5))
     let bitmap = BigInt(0)
 
     for (let item of projectedItems) {
@@ -384,10 +437,21 @@ const calculateBitmapStats = (karma, items, encType) => {
     // pad bitmap with zeroes
     rawBitmap = rawBitmap.padStart(bits, '0')
 
+    console.log("raw bitmap", rawBitmap)
     let compressRes = compressBitmap(rawBitmap);
 
     let headerBytes = compressRes.header.length / 8
     let totalBitmapBytes = headerBytes + compressRes.nonEmptyBytes;
+
+
+    console.log("compressed bitmap", compressRes.compressedBitmap)
+    console.log("header", compressRes.header)
+
+    console.log("raw bitmap length", rawBitmap.length);
+    console.log("compressed bitmap length", compressRes.compressedBitmap.length);
+    console.log("header length", compressRes.header.length);
+    console.log("compressed bitmap bytes", compressRes.nonEmptyBytes);
+    console.log("total bytes", totalBitmapBytes);
 
     let byteSize = getByteSize(karma, encType) + getByteSize(startId, encType) + getByteSize(range, encType) + getByteSize(headerBytes, encType) + totalBitmapBytes
 

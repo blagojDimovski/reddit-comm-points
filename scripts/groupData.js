@@ -206,7 +206,7 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
 
 
 const testGroupDataBitmapsClustered = (dataNew, dataRepeating) => {
-    const data = {repeating: {}, totalGasCost: 0}
+    const data = {repeating: {}, totalGasCost: 0, totalGasCostBitmap: 0, totalGasCostNative: 0, totalHybridGasCost: 0}
     //
     // groupNewSingles(data, dataNew.singles);
     // groupNewGroups(data, dataNew.groups);
@@ -216,9 +216,18 @@ const testGroupDataBitmapsClustered = (dataNew, dataRepeating) => {
     for (let karma in dataRepeating.groups) {
         let addrs = dataRepeating.groups[karma];
         data['repeating'][karma] = getBitmapStatsClusters(karma, addrs, 'native');
-        data['repeating']['totalGasCost'] += data['repeating'][karma].gasCostMin;
+        data.totalGasCost += data['repeating'][karma].gasCostMin;
+        data.totalGasCostBitmap += data['repeating'][karma].bitmapGasCost;
+        data.totalGasCostNative += data['repeating'][karma].nativeGasCost;
+        data.totalHybridGasCost += data['repeating'][karma].hybridGasCostMin;
 
     }
+
+    data.savingsVsBitmap = data.totalGasCostBitmap - data.totalGasCost;
+    data.savingsVsNative = data.totalGasCostNative - data.totalGasCost;
+
+    data.hybridSavingVsBitmap = data.totalGasCostBitmap - data.totalHybridGasCost;
+    data.hybridSavingVsNative = data.totalGasCostNative - data.totalHybridGasCost;
 
     return data;
 }
@@ -270,6 +279,12 @@ const group = (data, encType='rlp') => {
 
     let index = {};
     let grouped = {};
+    let totalSavings = {
+        savingsVsBitmap: 0,
+        savingsVsNative: 0,
+        hybridSavingVsBitmap: 0,
+        hybridSavingVsNative: 0,
+    }
     let groupsBitKeys = getGroupBitKeys()
     for (let fName in data) {
         let fData  = data[fName];
@@ -291,6 +306,11 @@ const group = (data, encType='rlp') => {
             grouped[fName] = groupDataBitmaps(groupedNew, groupedRepeating)
         } else {
             grouped[fName] = testGroupDataBitmapsClustered(groupedNew, groupedRepeating)
+            totalSavings.savingsVsBitmap += grouped[fName].savingsVsBitmap;
+            totalSavings.savingsVsNative += grouped[fName].savingsVsNative;
+
+            totalSavings.hybridSavingVsBitmap += grouped[fName].hybridSavingVsBitmap;
+            totalSavings.hybridSavingVsNative += grouped[fName].hybridSavingVsNative;
         }
         console.log(`grouped ${fName}`)
 
@@ -298,6 +318,7 @@ const group = (data, encType='rlp') => {
 
     return {
         data: grouped,
+        totalSavings: totalSavings,
         addrIndex: index
     }
 
@@ -314,7 +335,7 @@ const groupData = (argv) => {
     let groupedData = group(jsonData, encType);
 
     writeData(groupedData.data, dataset, 'grouped', encType);
-
+    fs.writeFileSync(`data/grouped/bitmapCluster/${dataset}/total_savings.json`, JSON.stringify(groupedData.totalSavings))
 
     if(!fs.existsSync(dataDirs.addrIndex)) {
         fs.mkdirSync(dataDirs.addrIndex)

@@ -1,1 +1,116 @@
-{"global":{"gasCosts":{"total":40025120},"byteSizes":{"total":2501570}},"dists":{"round_1_finalized":{"gasCosts":{"total":2694272},"byteSizes":{"total":168392}},"round_2_finalized":{"gasCosts":{"total":3628128},"byteSizes":{"total":226758}},"round_3_finalized":{"gasCosts":{"total":3389440},"byteSizes":{"total":211840}},"round_4_finalized":{"gasCosts":{"total":3989248},"byteSizes":{"total":249328}},"round_5_finalized":{"gasCosts":{"total":3472032},"byteSizes":{"total":217002}},"round_6_finalized":{"gasCosts":{"total":2975440},"byteSizes":{"total":185965}},"round_7_finalized":{"gasCosts":{"total":2825904},"byteSizes":{"total":176619}},"round_8_finalized":{"gasCosts":{"total":3483488},"byteSizes":{"total":217718}},"round_9_finalized":{"gasCosts":{"total":2622480},"byteSizes":{"total":163905}},"round_10_finalized":{"gasCosts":{"total":2553456},"byteSizes":{"total":159591}},"round_11_finalized":{"gasCosts":{"total":2831328},"byteSizes":{"total":176958}},"round_12_finalized":{"gasCosts":{"total":3103792},"byteSizes":{"total":193987}},"round_13_finalized":{"gasCosts":{"total":2456112},"byteSizes":{"total":153507}}}}
+{
+  "global": {
+    "gasCosts": {
+      "total": 40025328
+    },
+    "byteSizes": {
+      "total": 2501583
+    }
+  },
+  "dists": {
+    "round_1_finalized": {
+      "gasCosts": {
+        "total": 2694288
+      },
+      "byteSizes": {
+        "total": 168393
+      }
+    },
+    "round_2_finalized": {
+      "gasCosts": {
+        "total": 3628144
+      },
+      "byteSizes": {
+        "total": 226759
+      }
+    },
+    "round_3_finalized": {
+      "gasCosts": {
+        "total": 3389456
+      },
+      "byteSizes": {
+        "total": 211841
+      }
+    },
+    "round_4_finalized": {
+      "gasCosts": {
+        "total": 3989264
+      },
+      "byteSizes": {
+        "total": 249329
+      }
+    },
+    "round_5_finalized": {
+      "gasCosts": {
+        "total": 3472048
+      },
+      "byteSizes": {
+        "total": 217003
+      }
+    },
+    "round_6_finalized": {
+      "gasCosts": {
+        "total": 2975456
+      },
+      "byteSizes": {
+        "total": 185966
+      }
+    },
+    "round_7_finalized": {
+      "gasCosts": {
+        "total": 2825920
+      },
+      "byteSizes": {
+        "total": 176620
+      }
+    },
+    "round_8_finalized": {
+      "gasCosts": {
+        "total": 3483504
+      },
+      "byteSizes": {
+        "total": 217719
+      }
+    },
+    "round_9_finalized": {
+      "gasCosts": {
+        "total": 2622496
+      },
+      "byteSizes": {
+        "total": 163906
+      }
+    },
+    "round_10_finalized": {
+      "gasCosts": {
+        "total": 2553472
+      },
+      "byteSizes": {
+        "total": 159592
+      }
+    },
+    "round_11_finalized": {
+      "gasCosts": {
+        "total": 2831344
+      },
+      "byteSizes": {
+        "total": 176959
+      }
+    },
+    "round_12_finalized": {
+      "gasCosts": {
+        "total": 3103808
+      },
+      "byteSizes": {
+        "total": 193988
+      }
+    },
+    "round_13_finalized": {
+      "gasCosts": {
+        "total": 2456128
+      },
+      "byteSizes": {
+        "total": 153508
+      }
+    }
+  }
+}

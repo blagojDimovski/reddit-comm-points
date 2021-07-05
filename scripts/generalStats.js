@@ -2,7 +2,7 @@ const fs = require('fs')
 const {readData, getByteSizeForRepeatingGroup, getBitmapStats} = require('./utils')
 const {dataDirs, GAS_COST_BYTE} = require('./consts')
 
-const getLargestRepeatingGroupRlp = (data) => {
+const getLargestRepeatingGroup = (data, encType='rlp') => {
 
     const largestGroup = {
         numItems: 0,
@@ -10,22 +10,40 @@ const getLargestRepeatingGroupRlp = (data) => {
         karma: 0,
         byteSize: 0,
         gasCost: 0,
-        fName: ''
+        fileName: '',
+        groupKey: 0,
+        range: 0
     };
+
 
     for (let fName in data) {
         let fData = data[fName];
 
-        let repeatingGrouped = fData.repeatingGrouped;
+        for(let key in fData) {
+            // get only repeating groups
+            if(key[5] !== '1' || key[6] !== '1') continue;
 
-        for(let karma in repeatingGrouped) {
-            if(repeatingGrouped[karma].length > largestGroup.numItems) {
-                largestGroup.numItems = repeatingGrouped[karma].length;
-                largestGroup.items = repeatingGrouped[karma];
-                largestGroup.karma = karma;
-                largestGroup.fName = fName;
+            let repeatingGroup = fData[key];
+
+            for(let karma in repeatingGroup) {
+                if(repeatingGroup[karma].length > largestGroup.numItems) {
+                    let items = repeatingGroup[karma];
+                    let maxId = Math.max(...items);
+                    let minId = Math.min(...items);
+                    let range = maxId - minId;
+                    console.log(maxId, minId, range);
+                    largestGroup.numItems = items.length;
+                    largestGroup.items = items;
+                    largestGroup.karma = karma;
+                    largestGroup.fileName = fName;
+                    largestGroup.groupKey = key;
+                    largestGroup.range = range;
+                }
             }
+
         }
+
+
 
     }
 
@@ -125,6 +143,58 @@ const makeAddressIndex = (data) => {
 }
 
 
+const getUserStats = (data) => {
+
+    let addrIndex = {};
+    let stats = {
+        global: {
+            unique: 0,
+            repeating: 0,
+            percentRepeating: 0,
+            total: 0
+        },
+        dists: {}
+    };
+
+
+    for (let fName in data) {
+
+        let fData = data[fName];
+
+        let unique = 0;
+        let repeating = 0;
+        let total = 0;
+        for (let obj of fData) {
+            if(!obj.address || !obj.karma) continue;
+            if(obj.address in addrIndex) {
+                repeating++;
+            } else {
+                unique++;
+                addrIndex[obj.address] = 1;
+            }
+            total++;
+        }
+
+        stats.dists[fName] = {
+            unique: unique,
+            repeating: repeating,
+            percentRepeating: (repeating/total) * 100,
+            total: total
+        }
+
+        stats.global.total += total;
+
+    }
+
+    stats.global.unique = Object.keys(addrIndex).length;
+    stats.global.repeating = stats.global.total - stats.global.unique;
+
+    stats.global.percentRepeating = (stats.global.repeating/stats.global.total * 100);
+
+    return stats;
+}
+
+
 
 const generalStats = (argv) => {
 
@@ -140,16 +210,14 @@ const generalStats = (argv) => {
         fs.mkdirSync(statsDir, {recursive: true});
     }
 
-    const largestGroup = encType === 'rlp' ? getLargestRepeatingGroupRlp(groupedData) : getLargestRepeatingGroupNative(groupedData);
+    const largestGroup = getLargestRepeatingGroup(groupedData, encType)
     fs.writeFileSync(`${statsDir}/largestGroupStats.json`, JSON.stringify(largestGroup))
 
     const bmapStats = getBitmapStats(largestGroup.karma, largestGroup.items, largestGroup.gasCost, encType);
     fs.writeFileSync(`${statsDir}/largestGroupBitmapStats.json`, JSON.stringify(bmapStats))
 
-    // const index = makeAddressIndex(jsonData);
-    // fs.writeFileSync(`${statsDir}/addrIndex.json`, JSON.stringify(index))
-
-
+    const userStats = getUserStats(jsonData)
+    fs.writeFileSync(`${statsDir}/userStats.json`, JSON.stringify(userStats))
 
     console.log(`[${dataset}][${encType}] Stats saved!`)
 

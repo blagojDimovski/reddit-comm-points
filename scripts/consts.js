@@ -17,7 +17,8 @@ const dataDirs = {
     sizeStats: 'data/stats/size',
     generalStats: 'data/stats/general',
     json: 'data/json',
-    addrIndex: 'data/addrIndex'
+    addrIndex: 'data/addrIndex',
+    table: 'data/stats/table'
 }
 
 const statsTemplateRlp = {
@@ -44,7 +45,7 @@ const nativeTemplate = {
     repeatingGrouped: {}
 }
 
-const BITMAP_CLUSTER_GAP_SIZES = [8, 16, 24, 32]
+const BITMAP_CLUSTER_GAP_SIZES = [8, 16, 24, 32, 64, 128, 256]
 
 const getNativeTemplateWithBitmaps = () => {
 
