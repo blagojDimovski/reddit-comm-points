@@ -71,7 +71,7 @@ const readDataRecursively = (fSplit, basePath, data, index= 0) => {
 
 
 
-const writeData = (data, dataset = 'bricks', dType = 'grouped', encType = 'rlp') => {
+const writeData = (data, dataset = 'bricks', dType = 'grouped', encType) => {
     // data is in the format {'round_1_finalized: {...}, 'round_2_finalized': {...}} -> the keys are the filenames without prefix
     let writeDir;
     if(encType) {
@@ -473,6 +473,62 @@ const isSmallNum = (num) => {
 }
 
 
+const groupByKarma = (data) => {
+    const amountGroups = {};
+    for (let item of data) {
+
+        if(amountGroups[item.karma]) {
+            amountGroups[item.karma].push(item.addrOrId)
+        } else {
+            amountGroups[item.karma] = [item.addrOrId]
+        }
+    }
+
+    // get amount groups with more than 1 item in the group
+    const filteredAmountGroups = {};
+    const singles = {};
+    for (let karma of Object.keys(amountGroups)) {
+        if (amountGroups[karma].length > 1) {
+            filteredAmountGroups[karma] = amountGroups[karma];
+        } else {
+            let addrOrId = amountGroups[karma][0]
+            singles[addrOrId] = karma;
+        }
+    }
+
+    return {groups: filteredAmountGroups, singles };
+}
+
+const filterNewAndRepeatingItems = (data, index) => {
+
+    const newItems = [];
+    const repeatingItems = [];
+
+    for (let item of data) {
+
+        if(item.address in index) {
+            repeatingItems.push({
+                addrOrId: index[item.address],
+                karma: item.karma
+            })
+        } else {
+            newItems.push({
+                addrOrId: item.address,
+                karma: item.karma
+            })
+            index[item.address] = Object.keys(index).length
+        }
+
+    }
+    return {
+        newItems,
+        repeatingItems
+    }
+
+}
+
+
+
 module.exports = {
     getByteSizeForRepeatingGroup,
     getBitmapStats,
@@ -485,5 +541,7 @@ module.exports = {
     stringifyBigIntReplacer,
     getByteSize,
     isSmallNum,
-    groupAddresses
+    groupAddresses,
+    groupByKarma,
+    filterNewAndRepeatingItems
 }

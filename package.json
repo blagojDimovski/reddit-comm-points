@@ -51,6 +51,7 @@
     "makeStats": "node scripts/makeStats.js",
     "stats": "node scripts/generalStats.js",
     "testCompression": "node scripts/testCompression.js",
+    "groupReferencingStats": "node scripts/groupReferencingStats.js",
     "main": "node scripts/main.js"
   }
 }

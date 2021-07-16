@@ -1,0 +1,112 @@
+{
+  "dists": {
+    "round_2_finalized": {
+      "numAirdrops": 10578,
+      "new": 5600,
+      "repeating": 4978,
+      "uniqueRepeating": 599,
+      "groupedRepeating": 4379,
+      "uniquePercent": 12.032944957814383,
+      "groupedPercent": 87.96705504218562
+    },
+    "round_3_finalized": {
+      "numAirdrops": 9906,
+      "new": 3765,
+      "repeating": 6141,
+      "uniqueRepeating": 598,
+      "groupedRepeating": 5543,
+      "uniquePercent": 9.737827715355806,
+      "groupedPercent": 90.2621722846442
+    },
+    "round_4_finalized": {
+      "numAirdrops": 11652,
+      "new": 4055,
+      "repeating": 7597,
+      "uniqueRepeating": 710,
+      "groupedRepeating": 6887,
+      "uniquePercent": 9.345794392523365,
+      "groupedPercent": 90.65420560747664
+    },
+    "round_5_finalized": {
+      "numAirdrops": 10154,
+      "new": 2780,
+      "repeating": 7374,
+      "uniqueRepeating": 637,
+      "groupedRepeating": 6737,
+      "uniquePercent": 8.638459452129101,
+      "groupedPercent": 91.3615405478709
+    },
+    "round_6_finalized": {
+      "numAirdrops": 8713,
+      "new": 2325,
+      "repeating": 6388,
+      "uniqueRepeating": 509,
+      "groupedRepeating": 5879,
+      "uniquePercent": 7.968065122103946,
+      "groupedPercent": 92.03193487789606
+    },
+    "round_7_finalized": {
+      "numAirdrops": 8277,
+      "new": 1744,
+      "repeating": 6533,
+      "uniqueRepeating": 537,
+      "groupedRepeating": 5996,
+      "uniquePercent": 8.21980713301699,
+      "groupedPercent": 91.78019286698301
+    },
+    "round_8_finalized": {
+      "numAirdrops": 10198,
+      "new": 2183,
+      "repeating": 8015,
+      "uniqueRepeating": 610,
+      "groupedRepeating": 7405,
+      "uniquePercent": 7.610729881472239,
+      "groupedPercent": 92.38927011852776
+    },
+    "round_9_finalized": {
+      "numAirdrops": 7689,
+      "new": 1517,
+      "repeating": 6172,
+      "uniqueRepeating": 421,
+      "groupedRepeating": 5751,
+      "uniquePercent": 6.821127673363578,
+      "groupedPercent": 93.17887232663642
+    },
+    "round_10_finalized": {
+      "numAirdrops": 7485,
+      "new": 1513,
+      "repeating": 5972,
+      "uniqueRepeating": 489,
+      "groupedRepeating": 5483,
+      "uniquePercent": 8.188211654387139,
+      "groupedPercent": 91.81178834561285
+    },
+    "round_11_finalized": {
+      "numAirdrops": 8296,
+      "new": 1672,
+      "repeating": 6624,
+      "uniqueRepeating": 514,
+      "groupedRepeating": 6110,
+      "uniquePercent": 7.759661835748792,
+      "groupedPercent": 92.24033816425121
+    },
+    "round_12_finalized": {
+      "numAirdrops": 9095,
+      "new": 1836,
+      "repeating": 7259,
+      "uniqueRepeating": 533,
+      "groupedRepeating": 6726,
+      "uniquePercent": 7.3426091748174676,
+      "groupedPercent": 92.65739082518253
+    },
+    "round_13_finalized": {
+      "numAirdrops": 7205,
+      "new": 1309,
+      "repeating": 5896,
+      "uniqueRepeating": 418,
+      "groupedRepeating": 5478,
+      "uniquePercent": 7.08955223880597,
+      "groupedPercent": 92.91044776119402
+    }
+  }
+}

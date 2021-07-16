@@ -8,6 +8,7 @@ const { convertData } = require('./convertData')
 const { encodeData } = require('./encodeData')
 const { decodeData } = require('./decodeData')
 const { verifyData } = require('./verifyEncoding')
+const { groupReferencingStats } = require('./groupReferencingStats')
 const { printTable } = require('./table')
 
 const argv = yargs
@@ -64,6 +65,7 @@ const argv = yargs
     .command('decode', 'Decode the data')
     .command('verify', 'Verify if the data is properly encoded')
     .command('stats', 'Make general stats for dataset and encType')
+    .command('referencingStats', 'Make referencingStats for dataset')
     .command('table', 'Print markdown table from stats data, based on the `type` param', {
         type: {
             description: 'The type of table to print',
@@ -111,6 +113,8 @@ if (argv._.includes('convert')) {
     decodeData(argv)
 } else if (argv._.includes('verify')) {
     verifyData(argv)
+} else if (argv._.includes('referencingStats')) {
+    groupReferencingStats(argv)
 } else if (argv._.includes('stats')) {
     generalStats(argv)
 } else if (argv._.includes('table')) {

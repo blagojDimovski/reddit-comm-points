@@ -16,6 +16,8 @@ const dataDirs = {
     grouped: 'data/grouped',
     sizeStats: 'data/stats/size',
     generalStats: 'data/stats/general',
+    groupingStats: 'data/stats/grouping',
+    groupingMetadata: 'data/stats/groupingMetadata',
     json: 'data/json',
     addrIndex: 'data/addrIndex',
     table: 'data/stats/table'

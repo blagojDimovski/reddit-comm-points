@@ -1,5 +1,5 @@
 const fs = require('fs')
-const {readData, getByteSizeForRepeatingGroup, getBitmapStats} = require('./utils')
+const {readData, getByteSizeForRepeatingGroup, getBitmapStats, groupByKarma, filterNewAndRepeatingItems} = require('./utils')
 const {dataDirs, GAS_COST_BYTE} = require('./consts')
 
 const getLargestRepeatingGroup = (data, encType='rlp') => {
@@ -142,7 +142,6 @@ const makeAddressIndex = (data) => {
 
 }
 
-
 const getUserStats = (data) => {
 
     let addrIndex = {};
@@ -194,6 +193,41 @@ const getUserStats = (data) => {
     return stats;
 }
 
+const getGroupStats = (data) => {
+
+    let stats = {
+        dists: {}
+    };
+
+    const addrIndex = {};
+
+    for (let fName in data) {
+
+
+        let fData = data[fName];
+        const {newItems, repeatingItems} = filterNewAndRepeatingItems(fData, addrIndex);
+
+        if(fName === 'round_1_finalized') continue;
+
+        const {groups, singles} = groupByKarma(repeatingItems);
+        const numUniqueRepeating = Object.keys(singles).length;
+        const numGroupedRepeating = repeatingItems.length - numUniqueRepeating;
+        stats.dists[fName] = {
+            numAirdrops: fData.length,
+            new: newItems.length,
+            repeating: repeatingItems.length,
+            uniqueRepeating: numUniqueRepeating,
+            groupedRepeating: numGroupedRepeating,
+            uniquePercent: (numUniqueRepeating / repeatingItems.length) * 100,
+            groupedPercent:(numGroupedRepeating / repeatingItems.length) * 100
+        }
+
+        console.log(`Stats for ${fName} calculated`);
+
+    }
+
+    return stats;
+}
 
 
 const generalStats = (argv) => {
@@ -210,14 +244,18 @@ const generalStats = (argv) => {
         fs.mkdirSync(statsDir, {recursive: true});
     }
 
-    const largestGroup = getLargestRepeatingGroup(groupedData, encType)
-    fs.writeFileSync(`${statsDir}/largestGroupStats.json`, JSON.stringify(largestGroup))
+    // const largestGroup = getLargestRepeatingGroup(groupedData, encType)
+    // fs.writeFileSync(`${statsDir}/largestGroupStats.json`, JSON.stringify(largestGroup))
+    //
+    // const bmapStats = getBitmapStats(largestGroup.karma, largestGroup.items, largestGroup.gasCost, encType);
+    // fs.writeFileSync(`${statsDir}/largestGroupBitmapStats.json`, JSON.stringify(bmapStats))
+    //
+    // const userStats = getUserStats(jsonData)
+    // fs.writeFileSync(`${statsDir}/userStats.json`, JSON.stringify(userStats))
 
-    const bmapStats = getBitmapStats(largestGroup.karma, largestGroup.items, largestGroup.gasCost, encType);
-    fs.writeFileSync(`${statsDir}/largestGroupBitmapStats.json`, JSON.stringify(bmapStats))
+    const groupStats = getGroupStats(jsonData)
+    fs.writeFileSync(`${statsDir}/groupStats.json`, JSON.stringify(groupStats))
 
-    const userStats = getUserStats(jsonData)
-    fs.writeFileSync(`${statsDir}/userStats.json`, JSON.stringify(userStats))
 
     console.log(`[${dataset}][${encType}] Stats saved!`)
 
