@@ -1,8 +1,7 @@
 /* eslint no-use-before-define: "warn" */
-const fs = require("fs");
-const {  ethers } = require("hardhat");
+const {  ethers } = require("ethers");
 const rlp = require('rlp')
-const {getFileNames, readData, writeData} = require('./utils')
+const {readData, writeData} = require('./utils')
 const {getGroupBitKeys} = require('./consts')
 const {concat, arrayify, hexlify } = ethers.utils;
 
@@ -94,7 +93,6 @@ const encodeGroupsRepeating = (data, encType = 'rlp') => {
 
 const encodeGroupsRepeatingBitmap = (data, encType = 'rlp') => {
     let encodedData = [];
-    // TODO: test this out
     for (let amount of Object.keys(data)) {
         let amountEncoded = numberToBytes(amount);
         let startIdEncoded = numberToBytes(data[amount].startId)
@@ -176,7 +174,6 @@ const encode = (data) => {
     for(let fName in data) {
         fData = data[fName]
 
-
         encodedData[fName] = {}
         for (let key in fData) {
             if(!fData.hasOwnProperty(key)) continue;
@@ -208,8 +205,6 @@ const encodeData = (argv) => {
     console.log(`[${dataset}][${encType}] Data encoded!`);
 
 }
-
-// encodeData({dataset: 'bricks', encType: 'bitmap'})
 
 module.exports = {
     encodeData

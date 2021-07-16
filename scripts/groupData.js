@@ -1,7 +1,7 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
 const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup, getBitmapStatsClusters, isSmallNum, groupAddresses} = require('./utils')
-const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps, getGroupBitKeys} = require('./consts')
+const {dataDirs, getGroupBitKeys} = require('./consts')
 
 const groupByKarma = (data) => {
     const amountGroups = {};
@@ -207,11 +207,6 @@ const groupDataBitmaps = (dataNew, dataRepeating) => {
 
 const testGroupDataBitmapsClustered = (dataNew, dataRepeating) => {
     const data = {repeating: {}, totalGasCost: 0, totalGasCostBitmap: 0, totalGasCostNative: 0, totalHybridGasCost: 0}
-    //
-    // groupNewSingles(data, dataNew.singles);
-    // groupNewGroups(data, dataNew.groups);
-    // groupRepeatingSingles(data, dataRepeating.singles)
-    //
 
     for (let karma in dataRepeating.groups) {
         let addrs = dataRepeating.groups[karma];
@@ -240,10 +235,6 @@ const getBitGroupId = (inputs) => {
     }
 
     bitmask = bitmask.padStart(8, "0");
-
-    if(bitmask === '11111111') {
-        console.log(inputs);
-    }
 
     return bitmask;
 }
@@ -335,7 +326,10 @@ const groupData = (argv) => {
     let groupedData = group(jsonData, encType);
 
     writeData(groupedData.data, dataset, 'grouped', encType);
-    fs.writeFileSync(`data/grouped/bitmapCluster/${dataset}/total_savings.json`, JSON.stringify(groupedData.totalSavings))
+    if(encType === 'bitmapCluster') {
+        fs.writeFileSync(`data/grouped/bitmapCluster/${dataset}/total_savings.json`, JSON.stringify(groupedData.totalSavings))
+    }
+
 
     if(!fs.existsSync(dataDirs.addrIndex)) {
         fs.mkdirSync(dataDirs.addrIndex)
@@ -351,5 +345,3 @@ const groupData = (argv) => {
 module.exports = {
     groupData
 }
-
-// groupData({dataset: 'bricks', encType: 'bitmapCluster'})

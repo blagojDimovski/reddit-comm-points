@@ -9,7 +9,7 @@ const { encodeData } = require('./encodeData')
 const { decodeData } = require('./decodeData')
 const { verifyData } = require('./verifyEncoding')
 const { groupReferencingStats } = require('./groupReferencingStats')
-const { printTable } = require('./table')
+const { makeTable } = require('./makeTables')
 
 const argv = yargs
     .command('compute', 'Compute stats', {
@@ -45,32 +45,18 @@ const argv = yargs
         }
     })
     .command('convert', 'Convert raw csv data into json')
-    .command('group', 'Group data', {
-        chunk: {
-            description: 'chunk the groups into chunks of approximately equal size',
-            alias: 'chunk',
-            type: 'boolean',
-            default: false
-        }
-    })
-    .command('chunk', 'Chunk the parsed data into groups', {
-        bytesPerChunk: {
-            description: 'chunk the data into groups, where each group is of max bytesPerChunk bytes',
-            alias: 'bytes',
-            type: 'number',
-            default: 20000
-        }
-    })
+    .command('group', 'Group data')
     .command('encode', 'Encode the data')
     .command('decode', 'Decode the data')
     .command('verify', 'Verify if the data is properly encoded')
     .command('stats', 'Make general stats for dataset and encType')
     .command('referencingStats', 'Make referencingStats for dataset')
-    .command('table', 'Print markdown table from stats data, based on the `type` param', {
+    .command('makeTable', 'Print markdown table from stats data, based on the `type` param', {
         type: {
             description: 'The type of table to print',
             alias: 'type',
             type: 'string',
+            choices: ['comparison', 'naive'],
             default: 'comparison'
         }
     })
@@ -117,8 +103,8 @@ if (argv._.includes('convert')) {
     groupReferencingStats(argv)
 } else if (argv._.includes('stats')) {
     generalStats(argv)
-} else if (argv._.includes('table')) {
-    printTable(argv)
+} else if (argv._.includes('makeTable')) {
+    makeTable(argv)
 } else {
 
     if(fs.existsSync(dataDirs.json)) {

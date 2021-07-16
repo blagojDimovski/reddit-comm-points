@@ -2,7 +2,7 @@ const fs = require('fs')
 const {readData, getByteSizeForRepeatingGroup, getBitmapStats, groupByKarma, filterNewAndRepeatingItems} = require('./utils')
 const {dataDirs, GAS_COST_BYTE} = require('./consts')
 
-const getLargestRepeatingGroup = (data, encType='rlp') => {
+const getLargestRepeatingGroup = (data) => {
 
     const largestGroup = {
         numItems: 0,
@@ -31,7 +31,6 @@ const getLargestRepeatingGroup = (data, encType='rlp') => {
                     let maxId = Math.max(...items);
                     let minId = Math.min(...items);
                     let range = maxId - minId;
-                    console.log(maxId, minId, range);
                     largestGroup.numItems = items.length;
                     largestGroup.items = items;
                     largestGroup.karma = karma;
@@ -40,20 +39,12 @@ const getLargestRepeatingGroup = (data, encType='rlp') => {
                     largestGroup.range = range;
                 }
             }
-
         }
-
-
-
     }
-
     largestGroup.byteSize = getByteSizeForRepeatingGroup(largestGroup.karma, largestGroup.items, 'rlp');
     largestGroup.gasCost = largestGroup.byteSize * GAS_COST_BYTE
 
     return largestGroup;
-
-
-
 };
 
 
@@ -90,57 +81,6 @@ const getLargestRepeatingRecursive = (data, path) => {
 
 }
 
-const getLargestRepeatingGroupNative = (data) => {
-
-    const largestGroup = {
-        numItems: 0,
-        items: [],
-        karma: 0,
-        path: [],
-        byteSize: 0,
-        gasCost: 0,
-        fName: ''
-    };
-
-    for (let fName in data) {
-        let fData = data[fName];
-
-        let repeatingGrouped = fData.repeatingGrouped;
-        let largestGroupTmp = getLargestRepeatingRecursive(repeatingGrouped, []);
-        if(largestGroupTmp.numItems > largestGroup.numItems) {
-            largestGroup.numItems = largestGroupTmp.numItems;
-            largestGroup.items = largestGroupTmp.items;
-            largestGroup.karma = largestGroupTmp.karma;
-            largestGroup.path = largestGroupTmp.path;
-            largestGroup.fName = fName;
-        }
-
-
-    }
-    largestGroup.byteSize = getByteSizeForRepeatingGroup(largestGroup.karma, largestGroup.items, 'native');
-    largestGroup.gasCost = largestGroup.byteSize * GAS_COST_BYTE
-
-    return largestGroup;
-
-}
-
-const makeAddressIndex = (data) => {
-
-    const index = {};
-
-    for (let fName in data) {
-        let fData = data[fName];
-
-        for (let addr in fData) {
-            if (!(addr in index)) {
-                index[addr] = Object.keys(index).length
-            }
-        }
-
-    }
-    return index;
-
-}
 
 const getUserStats = (data) => {
 
@@ -244,14 +184,14 @@ const generalStats = (argv) => {
         fs.mkdirSync(statsDir, {recursive: true});
     }
 
-    // const largestGroup = getLargestRepeatingGroup(groupedData, encType)
-    // fs.writeFileSync(`${statsDir}/largestGroupStats.json`, JSON.stringify(largestGroup))
-    //
-    // const bmapStats = getBitmapStats(largestGroup.karma, largestGroup.items, largestGroup.gasCost, encType);
-    // fs.writeFileSync(`${statsDir}/largestGroupBitmapStats.json`, JSON.stringify(bmapStats))
-    //
-    // const userStats = getUserStats(jsonData)
-    // fs.writeFileSync(`${statsDir}/userStats.json`, JSON.stringify(userStats))
+    const largestGroup = getLargestRepeatingGroup(groupedData)
+    fs.writeFileSync(`${statsDir}/largestGroupStats.json`, JSON.stringify(largestGroup))
+
+    const bmapStats = getBitmapStats(largestGroup.karma, largestGroup.items, largestGroup.gasCost, encType);
+    fs.writeFileSync(`${statsDir}/largestGroupBitmapStats.json`, JSON.stringify(bmapStats))
+
+    const userStats = getUserStats(jsonData)
+    fs.writeFileSync(`${statsDir}/userStats.json`, JSON.stringify(userStats))
 
     const groupStats = getGroupStats(jsonData)
     fs.writeFileSync(`${statsDir}/groupStats.json`, JSON.stringify(groupStats))

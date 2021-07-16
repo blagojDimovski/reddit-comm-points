@@ -64,9 +64,6 @@ const verifyData = (argv) => {
 
 }
 
-// verifyData({dataset:'bricks', encType: 'bitmap'})
-
-
 module.exports = {
     verifyData
 }

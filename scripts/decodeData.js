@@ -1,5 +1,5 @@
 /* eslint no-use-before-define: "warn" */
-const { ethers } = require("hardhat");
+const { ethers } = require("ethers");
 const rlp = require('rlp')
 const {ADDR_BYTES, SMALL_BYTES, MED_BYTES, getGroupBitKeys} = require('./consts')
 const { readData, writeData } = require('./utils');
@@ -169,10 +169,7 @@ const bitmapDecodeRepeatingGrouped = (input, amountLen= 1, headerLen = 1, rangeL
         let headerBitmap = '';
         let nonEmptyBytes = 0;
         let headerArray = ethers.utils.arrayify(header);
-        let headerBn = ethers.BigNumber.from(header).toString();
-        let headerbint = BigInt(headerBn).toString(2)
 
-        // TODO: test this
         for(let i = 0; i < headerArray.length; i++) {
             let byte = headerArray[i];
             let headerBits = (byte.toString(2)).padStart(8, '0');
@@ -421,7 +418,7 @@ const decode = (data) => {
             try {
                 fDecodedData[key] = handleDecoding(batchType, remainder);
             } catch (e) {
-                console.error(`Error while decoding data, encType, fName: ${fName}.`, e)
+                console.error(`Error while decoding data, fName: ${fName}.`, e)
             }
 
         }
@@ -457,4 +454,3 @@ module.exports = {
     decodeData
 }
 
-// decodeData({dataset: 'bricks', encType: 'rlp'})

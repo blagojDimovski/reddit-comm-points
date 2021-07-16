@@ -4,6 +4,7 @@ const { getFileNames, writeData } = require('./utils')
 const { dataDirs } = require('./consts')
 
 const convertData = async (argv) => {
+    console.log("argv", argv)
     const dataset = argv.dataset;
 
     console.log(`[${dataset}] Converting data...`);

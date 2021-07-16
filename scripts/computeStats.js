@@ -1,6 +1,5 @@
 const fs = require('fs');
-const {dataDirs, getStatsTemplateRlp, getStatsTemplateNativeWithCosts,
-    ADDR_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE} = require('./consts')
+const {dataDirs, ADDR_BYTES, GAS_COST_BYTE} = require('./consts')
 const {getByteSize, readData, readFromFile, writeToFile} = require('./utils')
 
 const getStatsCompressed = (data) => {

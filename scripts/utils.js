@@ -1,5 +1,6 @@
 const fs = require("fs");
 const {dataDirs, RLP_MULTI_DIGIT_BYTES, RLP_SINGLE_DIGIT_BYTES, SMALL_BYTES, MED_BYTES, GAS_COST_BYTE, BITMAP_CLUSTER_GAP_SIZES} = require('./consts')
+
 const getFileNames = (readDirPath) => {
     let files = fs.readdirSync(readDirPath);
     return files.sort((a, b) => {
@@ -403,7 +404,6 @@ const getBitmapStats = (karma, ids, encType) => {
         return a - b;
     })
 
-    console.log("sorted items", items.slice(0,5), items.slice(items.length - 5));
 
     return calculateBitmapStats(karma, items, encType)
 
@@ -417,7 +417,6 @@ const calculateBitmapStats = (karma, items, encType) => {
     let endId = items[items.length - 1];
     let range = (endId - startId) + 1;
     let projectedItems = items.map(item => item - startId)
-    console.log("projected items", projectedItems.slice(0,5), projectedItems.slice(projectedItems.length - 5))
     let bitmap = BigInt(0)
 
     for (let item of projectedItems) {
@@ -437,21 +436,10 @@ const calculateBitmapStats = (karma, items, encType) => {
     // pad bitmap with zeroes
     rawBitmap = rawBitmap.padStart(bits, '0')
 
-    console.log("raw bitmap", rawBitmap)
     let compressRes = compressBitmap(rawBitmap);
 
     let headerBytes = compressRes.header.length / 8
     let totalBitmapBytes = headerBytes + compressRes.nonEmptyBytes;
-
-
-    console.log("compressed bitmap", compressRes.compressedBitmap)
-    console.log("header", compressRes.header)
-
-    console.log("raw bitmap length", rawBitmap.length);
-    console.log("compressed bitmap length", compressRes.compressedBitmap.length);
-    console.log("header length", compressRes.header.length);
-    console.log("compressed bitmap bytes", compressRes.nonEmptyBytes);
-    console.log("total bytes", totalBitmapBytes);
 
     let byteSize = getByteSize(karma, encType) + getByteSize(startId, encType) + getByteSize(range, encType) + getByteSize(headerBytes, encType) + totalBitmapBytes
 

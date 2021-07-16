@@ -1,7 +1,6 @@
 /* eslint no-use-before-define: "warn" */
 const fs = require("fs");
-const {readData, writeData, getBitmapStats, getByteSizeForRepeatingGroup, getBitmapStatsClusters, isSmallNum, groupAddresses, groupByKarma, filterNewAndRepeatingItems} = require('./utils')
-const {dataDirs, GAS_COST_BYTE, getNativeTemplate, getNativeTemplateWithBitmaps, getGroupBitKeys} = require('./consts')
+const {readData, writeData, groupByKarma, filterNewAndRepeatingItems} = require('./utils')
 
 
 const getGroupIndexAndMetadata = (data) => {
