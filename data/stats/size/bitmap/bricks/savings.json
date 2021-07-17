@@ -1,0 +1,146 @@
+{
+  "compressed_naive": {
+    "global": {
+      "gasCosts": {
+        "saving": 24411152,
+        "savingPercent": 61.68315246526904
+      },
+      "byteSizes": {
+        "saving": 1525697,
+        "savingPercent": 61.68315246526904
+      }
+    },
+    "dists": {
+      "round_1_finalized": {
+        "gasCosts": {
+          "saving": 105536,
+          "savingPercent": 3.972871718887403
+        },
+        "byteSizes": {
+          "saving": 6596,
+          "savingPercent": 3.972871718887403
+        }
+      },
+      "round_2_finalized": {
+        "gasCosts": {
+          "saving": 1579728,
+          "savingPercent": 44.13594871749023
+        },
+        "byteSizes": {
+          "saving": 98733,
+          "savingPercent": 44.13594871749023
+        }
+      },
+      "round_3_finalized": {
+        "gasCosts": {
+          "saving": 1911936,
+          "savingPercent": 57.080077192043866
+        },
+        "byteSizes": {
+          "saving": 119496,
+          "savingPercent": 57.080077192043866
+        }
+      },
+      "round_4_finalized": {
+        "gasCosts": {
+          "saving": 2360416,
+          "savingPercent": 59.90027853795993
+        },
+        "byteSizes": {
+          "saving": 147526,
+          "savingPercent": 59.90027853795993
+        }
+      },
+      "round_5_finalized": {
+        "gasCosts": {
+          "saving": 2273632,
+          "savingPercent": 66.24801864801864
+        },
+        "byteSizes": {
+          "saving": 142102,
+          "savingPercent": 66.24801864801864
+        }
+      },
+      "round_6_finalized": {
+        "gasCosts": {
+          "saving": 1965200,
+          "savingPercent": 66.75416856888194
+        },
+        "byteSizes": {
+          "saving": 122825,
+          "savingPercent": 66.75416856888194
+        }
+      },
+      "round_7_finalized": {
+        "gasCosts": {
+          "saving": 2000688,
+          "savingPercent": 71.54226407753659
+        },
+        "byteSizes": {
+          "saving": 125043,
+          "savingPercent": 71.54226407753659
+        }
+      },
+      "round_8_finalized": {
+        "gasCosts": {
+          "saving": 2458544,
+          "savingPercent": 71.35778504290968
+        },
+        "byteSizes": {
+          "saving": 153659,
+          "savingPercent": 71.35778504290968
+        }
+      },
+      "round_9_finalized": {
+        "gasCosts": {
+          "saving": 1887600,
+          "savingPercent": 72.69842247966479
+        },
+        "byteSizes": {
+          "saving": 117975,
+          "savingPercent": 72.69842247966479
+        }
+      },
+      "round_10_finalized": {
+        "gasCosts": {
+          "saving": 1824864,
+          "savingPercent": 72.1860759493671
+        },
+        "byteSizes": {
+          "saving": 114054,
+          "savingPercent": 72.1860759493671
+        }
+      },
+      "round_11_finalized": {
+        "gasCosts": {
+          "saving": 2024240,
+          "savingPercent": 72.23608406940694
+        },
+        "byteSizes": {
+          "saving": 126515,
+          "savingPercent": 72.23608406940694
+        }
+      },
+      "round_12_finalized": {
+        "gasCosts": {
+          "saving": 2219680,
+          "savingPercent": 72.25182152919916
+        },
+        "byteSizes": {
+          "saving": 138730,
+          "savingPercent": 72.25182152919916
+        }
+      },
+      "round_13_finalized": {
+        "gasCosts": {
+          "saving": 1799088,
+          "savingPercent": 73.95814149280434
+        },
+        "byteSizes": {
+          "saving": 112443,
+          "savingPercent": 73.95814149280434
+        }
+      }
+    }
+  }
+}

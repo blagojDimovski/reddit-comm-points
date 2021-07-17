@@ -35,7 +35,7 @@ const makeComparisonTable = (encType, compressed, savings, naive) => {
 
 };
 
-const makeNaiveStatsTable = (naiveRlp, naiveNative) => {
+const makeBasicStatsTable = (naiveRlp, naiveNative) => {
     const tableRows = [];
 
 
@@ -91,7 +91,7 @@ const makeTable = (argv) => {
         writeToFile(`${subdir}/comparison_table.md`, compTable, false);
         console.log(`[${dataset}][${encType}] Comparison table created!`);
 
-    } else if (type === 'naive') {
+    } else if (type === 'basic') {
 
         console.log(`[${dataset}] Creating naive stats table...`);
 
@@ -99,10 +99,10 @@ const makeTable = (argv) => {
         let naiveRlp = readFromFile(`${dataDirs.sizeStats}/rlp/${dataset}/naiveGasCosts.json`);
         let naiveNative = readFromFile(`${dataDirs.sizeStats}/native/${dataset}/naiveGasCosts.json`);
 
-        const naiveTable = makeNaiveStatsTable(naiveRlp, naiveNative);
-        writeToFile(`${subdir}/naive_stats_table.md`, naiveTable, false);
+        const naiveTable = makeBasicStatsTable(naiveRlp, naiveNative);
+        writeToFile(`${subdir}/basic_stats_table.md`, naiveTable, false);
 
-        console.log(`[${dataset}] Naive stats table created!`);
+        console.log(`[${dataset}] Basic stats table created!`);
 
 
     }

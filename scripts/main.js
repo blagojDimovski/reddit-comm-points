@@ -1,5 +1,3 @@
-const fs = require('fs');
-const {dataDirs} = require('./consts')
 const yargs = require('yargs');
 const { computeStats } = require('./computeStats')
 const { generalStats } = require('./generalStats')
@@ -51,21 +49,13 @@ const argv = yargs
     .command('verify', 'Verify if the data is properly encoded')
     .command('stats', 'Make general stats for dataset and encType')
     .command('referencingStats', 'Make referencingStats for dataset')
-    .command('makeTable', 'Print markdown table from stats data, based on the `type` param', {
+    .command('tables', 'Make markdown table from stats data, based on the `type` param', {
         type: {
-            description: 'The type of table to print',
+            description: 'The type of table to make',
             alias: 'type',
             type: 'string',
-            choices: ['comparison', 'naive'],
+            choices: ['comparison', 'basic'],
             default: 'comparison'
-        }
-    })
-    .command('batchMint', 'Batch mint subreddit points', {
-        round: {
-            description: 'the round to be batch minted',
-            alias: 'r',
-            type: 'number',
-            default: 1
         }
     })
     .option('encType', {
@@ -103,55 +93,8 @@ if (argv._.includes('convert')) {
     groupReferencingStats(argv)
 } else if (argv._.includes('stats')) {
     generalStats(argv)
-} else if (argv._.includes('makeTable')) {
+} else if (argv._.includes('tables')) {
     makeTable(argv)
 } else {
-
-    if(fs.existsSync(dataDirs.json)) {
-        fs.rmdirSync(dataDirs.json)
-    }
-
-    if(fs.existsSync(dataDirs.grouped)) {
-        fs.rmdirSync(dataDirs.grouped)
-    }
-
-    if(fs.existsSync(dataDirs.encoded)) {
-        fs.rmdirSync(dataDirs.encoded)
-    }
-
-    if(fs.existsSync(dataDirs.decoded)) {
-        fs.rmdirSync(dataDirs.decoded)
-    }
-
-    if(fs.existsSync(dataDirs.stats)) {
-        fs.rmdirSync(dataDirs.stats)
-    }
-
-    convertData({dataset: 'bricks'})
-    convertData({dataset: 'moons'})
-
-    groupData({dataset: 'bricks', encType: 'rlp'})
-    groupData({dataset: 'bricks', encType: 'native'})
-    groupData({dataset: 'moons', encType: 'rlp'})
-    groupData({dataset: 'moons', encType: 'native'})
-
-    encodeData({dataset: 'bricks', encType: 'rlp'})
-    encodeData({dataset: 'bricks', encType: 'native'})
-    encodeData({dataset: 'moons', encType: 'rlp'})
-    encodeData({dataset: 'moons', encType: 'native'})
-
-    decodeData({dataset: 'bricks', encType: 'rlp'})
-    decodeData({dataset: 'bricks', encType: 'native'})
-    decodeData({dataset: 'moons', encType: 'rlp'})
-    decodeData({dataset: 'moons', encType: 'native'})
-
-    verifyData({dataset: 'bricks', encType: 'rlp'})
-    verifyData({dataset: 'bricks', encType: 'native'})
-    verifyData({dataset: 'moons', encType: 'rlp'})
-    verifyData({dataset: 'moons', encType: 'native'})
-
-    computeStats({dataset: 'bricks', encType: 'rlp'})
-    computeStats({dataset: 'bricks', encType: 'native'})
-    computeStats({dataset: 'moons', encType: 'rlp'})
-    computeStats({dataset: 'moons', encType: 'native'})
+    console.error("Please enter valid command.")
 }
