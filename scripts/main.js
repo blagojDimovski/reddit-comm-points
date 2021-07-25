@@ -2,8 +2,10 @@ const yargs = require('yargs');
 const { computeStats } = require('./computeStats')
 const { generalStats } = require('./generalStats')
 const { groupData } = require('./groupData')
+const { groupDataChunked } = require('./groupDataChunked')
 const { convertData } = require('./convertData')
 const { encodeData } = require('./encodeData')
+const { encodeDataChunked } = require('./encodeDataChunked')
 const { decodeData } = require('./decodeData')
 const { verifyData } = require('./verifyEncoding')
 const { groupReferencingStats } = require('./groupReferencingStats')
@@ -44,7 +46,16 @@ const argv = yargs
     })
     .command('convert', 'Convert raw csv data into json')
     .command('group', 'Group data')
+    .command('groupChunked', 'Group data chunked', {
+        maxItems: {
+            alias: 'maxItems',
+            description: 'Max items per chounk',
+            type: 'number',
+            default: 50
+        }
+    })
     .command('encode', 'Encode the data')
+    .command('encodeChunked', 'Encode the data chunked')
     .command('decode', 'Decode the data')
     .command('verify', 'Verify if the data is properly encoded')
     .command('stats', 'Make general stats for dataset and encType')
@@ -59,7 +70,7 @@ const argv = yargs
         }
     })
     .option('encType', {
-        alias: 'encType',
+        alias: 'e',
         description: 'the number encoding type',
         type: 'string',
         choices: ['rlp', 'native', 'bitmap', 'bitmapCluster'],
@@ -72,6 +83,12 @@ const argv = yargs
         choices: ['bricks', 'moons'],
         default: 'bricks'
     })
+    .option('rounds', {
+        alias: 'r',
+        description: 'number of distribution rounds to perform the operation on',
+        type: 'number',
+        default: 0
+    })
     .help()
     .alias('help', 'h')
     .argv;
@@ -83,8 +100,12 @@ if (argv._.includes('convert')) {
     computeStats(argv);
 } else if (argv._.includes('group')) {
     groupData(argv)
+} else if (argv._.includes('groupChunked')) {
+    groupDataChunked(argv)
 } else if (argv._.includes('encode')) {
     encodeData(argv)
+} else if (argv._.includes('encodeChunked')) {
+    encodeDataChunked(argv)
 } else if (argv._.includes('decode')) {
     decodeData(argv)
 } else if (argv._.includes('verify')) {

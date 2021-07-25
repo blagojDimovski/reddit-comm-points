@@ -88,7 +88,7 @@ const writeData = (data, dataset = 'bricks', dType = 'grouped', encType) => {
     for (let file in data) {
         let fName = file;
         let fData = data[file];
-        if(dType !== 'encoded') {
+        if(dType !== 'encoded' && dType !== 'encodedChunked') {
             fName = `${fName}.json`;
             fData = JSON.stringify(fData);
             fs.writeFileSync(`${writeDir}/${fName}`, fData);
@@ -410,6 +410,7 @@ const getBitmapStats = (karma, ids, encType) => {
 }
 
 
+
 const calculateBitmapStats = (karma, items, encType) => {
 
 
@@ -451,7 +452,9 @@ const calculateBitmapStats = (karma, items, encType) => {
         rawBitmap: compressRes.rawBitmap,
         compressedBitmap: compressRes.compressedBitmap,
         byteSize,
-        karma
+        karma,
+        items,
+        encType
     }
 
 }

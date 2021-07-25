@@ -21,6 +21,7 @@
     "yargs": "^17.0.1"
   },
   "scripts": {
-    "main": "node scripts/main.js"
+    "main": "node scripts/main.js",
+    "encodeChunked": "node scripts/encodeDataChunked.js"
   }
 }
