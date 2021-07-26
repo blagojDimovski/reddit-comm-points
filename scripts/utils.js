@@ -88,7 +88,7 @@ const writeData = (data, dataset = 'bricks', dType = 'grouped', encType) => {
     for (let file in data) {
         let fName = file;
         let fData = data[file];
-        if(dType !== 'encoded' && dType !== 'encodedChunked') {
+        if(dType !== 'encoded' && dType !== 'encodedChunked' && dType !== 'encodedChunkedTest') {
             fName = `${fName}.json`;
             fData = JSON.stringify(fData);
             fs.writeFileSync(`${writeDir}/${fName}`, fData);

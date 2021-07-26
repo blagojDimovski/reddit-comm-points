@@ -49,13 +49,26 @@ const argv = yargs
     .command('groupChunked', 'Group data chunked', {
         maxItems: {
             alias: 'maxItems',
-            description: 'Max items per chounk',
+            description: 'Max items per chunk',
             type: 'number',
             default: 50
+        },
+        test: {
+            alias: 'test',
+            description: 'Generate test chunks',
+            type: 'boolean',
+            default: false
         }
     })
     .command('encode', 'Encode the data')
-    .command('encodeChunked', 'Encode the data chunked')
+    .command('encodeChunked', 'Encode the data chunked', {
+        test: {
+            alias: 'test',
+            description: 'Generate test chunks',
+            type: 'boolean',
+            default: false
+        }
+    })
     .command('decode', 'Decode the data')
     .command('verify', 'Verify if the data is properly encoded')
     .command('stats', 'Make general stats for dataset and encType')

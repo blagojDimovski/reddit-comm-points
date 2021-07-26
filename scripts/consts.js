@@ -13,9 +13,11 @@ const dataDirs = {
     raw: 'data/raw',
     encoded: 'data/encoded',
     encodedChunked: 'data/encodedChunked',
+    encodedChunkedTest: 'data/encodedChunked/test',
     decoded: 'data/decoded',
     grouped: 'data/grouped',
     groupedChunks: 'data/groupedChunks',
+    groupedChunksTest: 'data/groupedChunks/test',
     sizeStats: 'data/stats/size',
     generalStats: 'data/stats/general',
     groupingStats: 'data/stats/grouping',
@@ -202,7 +204,6 @@ const getGroupBitKeys = () => {
         groupsBitKeys[key]['dec'] = parseInt(bin, 2);
     }
     groupBitFlags.first = false;
-    // console.log("groupBitKeys", groupsBitKeys)
     return groupsBitKeys;
 }
 

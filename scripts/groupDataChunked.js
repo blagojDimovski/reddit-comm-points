@@ -204,7 +204,6 @@ const makeGroupsChunks = (dataNew, maxItems) => {
 
                 }
             }
-
         }
 
         let addresses = dataNew[amount];
@@ -257,7 +256,6 @@ const makeBitmapChunks = (dataNew, maxItems) => {
         let groupId;
         let bitmapChunk;
         while(itemsLen > maxItems) {
-
             groupId = data.amounts[amount].numGroups;
             bitmapChunk = getBitmapStats(amount, items.slice(0, maxItems), encType);
             delete bitmapChunk['items'];
@@ -277,10 +275,7 @@ const makeBitmapChunks = (dataNew, maxItems) => {
         data.amounts[amount].groups[groupId] = bitmapChunk;
         data.amounts[amount].numGroups += 1;
 
-
-
     }
-
 
     return data;
 
@@ -356,7 +351,6 @@ const groupDataBitmaps = (dataNew, dataRepeating, maxItems= 50) => {
 
     }
 
-
     return data;
 
 }
@@ -425,21 +419,6 @@ const setAsRepeatingGroupedBitmap = (data, karma, karmaSm, bitmapStats) => {
     setGroupValue(data, groupId, karma, bitmapStats)
 }
 
-const setAsRepeatingGroupedBitmapStatsChunks = (data, karma, karmaSm, bitmapStatsChunks) => {
-
-    // TODO
-    for(let i = 0; i < bitmapStatsChunks.length; i++) {
-
-    }
-
-    let startIdSm = isSmallNum(bitmapStats.startId);
-    let rangeSm = isSmallNum(bitmapStats.range);
-    let headerSm = isSmallNum(bitmapStats.headerBytes)
-
-    let groupId = getBitGroupId([1, startIdSm, rangeSm, headerSm, karmaSm, 1, 1, 1]);
-    setGroupValue(data, groupId, karma, bitmapStats)
-}
-
 
 const group = (data, encType='rlp', maxItems = 50, numRounds = 1) => {
 
@@ -490,23 +469,64 @@ const group = (data, encType='rlp', maxItems = 50, numRounds = 1) => {
 
 }
 
+const makeTestData = (data) => {
+
+    let fileNames = ['round_1_finalized', 'round_2_finalized'];
+    let fData = data[fileNames[0]];
+    let addrObjs = fData.slice(0, 100);
+    let addrObjsNew = [];
+    let counter = 0;
+    let karma = 1;
+
+    for(let addrObj of addrObjs) {
+        if(counter === 100) break;
+        if(counter >= 90) {
+            karma = 2;
+        }
+        addrObjsNew.push({
+            address: addrObj.address,
+            karma: karma
+        })
+        counter++;
+    }
+
+    let newData = {};
+    for (let fileName of fileNames) {
+        newData[fileName] = addrObjsNew;
+    }
+    return newData;
+
+}
+
 const groupDataChunked = (argv) => {
     const dataset = argv.dataset;
     const encType = argv.encType;
-    const maxItems = argv.maxItems;
+    const test = argv.test;
     let rounds = argv.rounds;
+    let maxItems = argv.maxItems;
 
-    const jsonData = readData(dataset, 'json');
+    let jsonData = readData(dataset, 'json');
 
     console.log(`[${dataset}][${encType}] Grouping chunked data...`);
 
-    if(rounds === 0) {
-        rounds = Object.keys(jsonData).length;
+    let groupedData;
+
+
+    if(test) {
+        rounds = 2;
+        maxItems = 100;
+        jsonData = makeTestData(jsonData)
+        groupedData = group(jsonData, encType, maxItems, rounds);
+        writeData(groupedData.data, dataset, 'groupedChunksTest', encType);
+    } else {
+
+        if(rounds === 0) {
+            rounds = Object.keys(jsonData).length;
+        }
+
+        groupedData = group(jsonData, encType, maxItems, rounds);
+        writeData(groupedData.data, dataset, 'groupedChunks', encType);
     }
-
-    let groupedData = group(jsonData, encType, maxItems, rounds);
-
-    writeData(groupedData.data, dataset, 'groupedChunks', encType);
 
 
     if(!fs.existsSync(dataDirs.addrIndex)) {

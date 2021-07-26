@@ -241,6 +241,7 @@ const encode = (data, rounds= 1) => {
 const encodeDataChunked = (argv) => {
     const dataset = argv.dataset;
     const encType = argv.encType;
+    const test = argv.test;
     let rounds = argv.rounds;
 
     console.log(`[${dataset}][${encType}] Encoding data...`);
@@ -249,20 +250,24 @@ const encodeDataChunked = (argv) => {
         rounds = Object.keys(jsonData).length;
     }
 
-    const groupedData = readData(dataset, 'groupedChunks',encType);
+    let dTypeRead;
+    let dTypeWrite;
+    if(test) {
+        dTypeRead = 'groupedChunksTest';
+        dTypeWrite = 'encodedChunkedTest';
+    } else {
+        dTypeRead = 'groupedChunks';
+        dTypeWrite = 'encodedChunked';
+    }
+
+    const groupedData = readData(dataset, dTypeRead, encType);
     let encodedData = encode(groupedData, rounds)
 
-    writeData(encodedData, dataset, 'encodedChunked', encType);
+    writeData(encodedData, dataset, dTypeWrite, encType);
 
     console.log(`[${dataset}][${encType}] Data encoded!`);
 
 }
-
-// encodeDataChunked({
-//     dataset: 'bricks',
-//     encType: 'native',
-//     rounds: 2
-// })
 
 module.exports = {
     encodeDataChunked
